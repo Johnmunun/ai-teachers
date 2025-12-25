@@ -115,7 +115,7 @@ export const currencies: Record<CurrencyCode, Currency> = {
 
 // Devise par défaut (peut être configurée via .env)
 export const DEFAULT_CURRENCY: CurrencyCode = 
-  (process.env.NEXT_PUBLIC_CURRENCY as CurrencyCode) || 'XAF';
+  (process.env.NEXT_PUBLIC_CURRENCY as CurrencyCode) || 'USD';
 
 /**
  * Obtenir la devise actuelle
@@ -135,7 +135,7 @@ export function getCurrency(): Currency {
       console.error('Error loading currency from settings:', e);
     }
   }
-  return currencies[DEFAULT_CURRENCY] || currencies.XAF;
+  return currencies[DEFAULT_CURRENCY] || currencies.USD;
 }
 
 /**
@@ -163,7 +163,7 @@ export function getCurrencyCode(): CurrencyCode {
  */
 export function formatMoney(amount: number, currencyCode?: CurrencyCode): string {
   const code = currencyCode || getCurrencyCode();
-  const currency = currencies[code] || currencies.XAF;
+  const currency = currencies[code] || currencies.USD;
   
   const formattedNumber = new Intl.NumberFormat(currency.locale, {
     minimumFractionDigits: currency.decimals,
@@ -181,7 +181,7 @@ export function formatMoney(amount: number, currencyCode?: CurrencyCode): string
  * Formater un montant de manière compacte (ex: 150K FCFA)
  */
 export function formatMoneyCompact(amount: number, currencyCode?: CurrencyCode): string {
-  const currency = currencies[currencyCode || DEFAULT_CURRENCY] || currencies.XAF;
+  const currency = currencies[currencyCode || DEFAULT_CURRENCY] || currencies.USD;
   
   let formattedNumber: string;
   

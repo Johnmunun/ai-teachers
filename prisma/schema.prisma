@@ -80,7 +80,7 @@ model TrainingSession {
   
   // Tarification
   totalPrice  Float    @default(0)
-  currency    String   @default("XAF")
+  currency    String   @default("USD")
   
   // Tranches planifiées (en %)
   plannedTranches Json? // Ex: [{"percent": 30, "dueWeek": 1}, {"percent": 40, "dueWeek": 6}, {"percent": 30, "dueWeek": 10}]

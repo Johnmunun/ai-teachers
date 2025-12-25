@@ -77,7 +77,26 @@ export default function Sidebar({ user, isMobileOpen = false, onMobileToggle }: 
   }, []);
 
   const handleLogout = async () => {
-    await signOut({ callbackUrl: '/login' });
+    try {
+      // Essayer avec signOut de next-auth/react
+      await signOut({ 
+        callbackUrl: '/login',
+        redirect: false // On gère la redirection manuellement pour éviter les erreurs
+      });
+      
+      // Redirection manuelle après signOut
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Fallback: supprimer la session et rediriger
+      if (typeof window !== 'undefined') {
+        // Nettoyer le localStorage si nécessaire
+        localStorage.removeItem('codinglive_settings');
+        window.location.href = '/login';
+      }
+    }
   };
 
   const handleLinkClick = () => {

@@ -53,7 +53,7 @@ export default function NewTrainingSessionPage() {
     startDate: '',
     durationWeeks: 12,
     totalPrice: 150000,
-    currency: 'XAF' as CurrencyCode,
+    currency: 'USD' as CurrencyCode,
     // Tranches planifiées
     plannedTranches: [
       { percent: 30, dueWeek: 1, label: 'Première tranche' },

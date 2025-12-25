@@ -46,7 +46,7 @@ export default function SettingsPage() {
     timezone: 'Africa/Douala',
     
     // Currency
-    currency: 'XAF' as CurrencyCode,
+    currency: 'USD' as CurrencyCode,
     
     // Notifications
     emailNotifications: true,
@@ -70,8 +70,8 @@ export default function SettingsPage() {
   });
 
   // Conversion preview
-  const [conversionAmount, setConversionAmount] = useState(100000);
-  const [conversionFrom, setConversionFrom] = useState<CurrencyCode>('XAF');
+  const [conversionAmount, setConversionAmount] = useState(100);
+  const [conversionFrom, setConversionFrom] = useState<CurrencyCode>('USD');
   const [conversionTo, setConversionTo] = useState<CurrencyCode>('EUR');
 
   // Load settings from localStorage
