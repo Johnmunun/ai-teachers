@@ -1,0 +1,419 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  COMPLETED
+  EXCUSED // Nouveau: Paiement partiel avec excuse
+}
+
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  BANK_TRANSFER
+  OTHER
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  image     String?
+  role      Role     @default(STUDENT)
+  isBlocked Boolean  @default(false)
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  classroomsAsTeacher Classroom[]        @relation("TeacherClassrooms")
+  studentClassrooms   StudentClassroom[]
+  quizResponses       QuizResponse[]
+  comprehensionLogs   ComprehensionLog[]
+  payments            Payment[]
+  paymentTranches     PaymentTranche[]
+  sessionNotes        SessionNote[]
+  revisionSessions    RevisionSession[]
+  trainingSessions    TrainingSession[]  @relation("TeacherTrainingSessions")
+  studentEnrollments  StudentEnrollment[]
+}
+
+// ================================
+// SESSION DE FORMATION (3 mois, etc.)
+// ================================
+model TrainingSession {
+  id          String   @id @default(uuid())
+  title       String   // Ex: "Formation Développement Web - Janvier 2025"
+  description String?  @db.Text
+  teacherId   String
+  
+  // Durée et dates
+  startDate   DateTime
+  endDate     DateTime
+  durationWeeks Int    @default(12) // 3 mois = 12 semaines
+  
+  // Tarification
+  totalPrice  Float    @default(0)
+  currency    String   @default("XAF")
+  
+  // Tranches planifiées (en %)
+  plannedTranches Json? // Ex: [{"percent": 30, "dueWeek": 1}, {"percent": 40, "dueWeek": 6}, {"percent": 30, "dueWeek": 10}]
+  
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  teacher     User               @relation("TeacherTrainingSessions", fields: [teacherId], references: [id])
+  modules     Module[]
+  schedules   Schedule[]
+  enrollments StudentEnrollment[]
+}
+
+// ================================
+// MODULE (partie d'une session)
+// ================================
+model Module {
+  id               String   @id @default(uuid())
+  trainingSessionId String
+  title            String   // Ex: "HTML & CSS Fondamentaux"
+  description      String?  @db.Text
+  objectives       String[] // Objectifs du module
+  orderIndex       Int      @default(0) // Ordre dans la session
+  estimatedHours   Int      @default(10) // Durée estimée en heures
+  
+  // Contenu généré par IA
+  aiGeneratedContent Json?  // Structure du cours proposée par l'IA
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  trainingSession TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+  courses         Course[]
+  progressions    ModuleProgression[]
+}
+
+// ================================
+// COURS (leçon dans un module)
+// ================================
+model Course {
+  id          String   @id @default(uuid())
+  moduleId    String
+  title       String   // Ex: "Les balises HTML de base"
+  description String?  @db.Text
+  content     String?  @db.Text  // Contenu du cours
+  orderIndex  Int      @default(0)
+  
+  // Contenu généré par IA
+  aiOutline   Json?    // Plan du cours généré par IA
+  aiExercises Json?    // Exercices suggérés par IA
+  
+  // Durée
+  estimatedMinutes Int @default(60)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  lessons     Lesson[] // Sessions live de ce cours
+  progressions CourseProgression[]
+}
+
+// ================================
+// HORAIRE
+// ================================
+model Schedule {
+  id                String   @id @default(uuid())
+  trainingSessionId String
+  dayOfWeek         DayOfWeek
+  startTime         String   // Format "HH:MM"
+  endTime           String   // Format "HH:MM"
+  isRecurring       Boolean  @default(true)
+  specificDate      DateTime? // Si non récurrent
+  location          String?  // Salle ou lien en ligne
+  notes             String?
+  
+  createdAt         DateTime @default(now())
+
+  // Relations
+  trainingSession TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+}
+
+// ================================
+// INSCRIPTION ÉTUDIANT À UNE SESSION
+// ================================
+model StudentEnrollment {
+  id                String   @id @default(uuid())
+  studentId         String
+  trainingSessionId String
+  enrolledAt        DateTime @default(now())
+  
+  // Paiement pour cette session
+  totalAmount       Float
+  paidAmount        Float    @default(0)
+  status            PaymentStatus @default(PENDING)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  student         User            @relation(fields: [studentId], references: [id])
+  trainingSession TrainingSession @relation(fields: [trainingSessionId], references: [id])
+  tranches        EnrollmentTranche[]
+  
+  @@unique([studentId, trainingSessionId])
+}
+
+// ================================
+// TRANCHE DE PAIEMENT POUR SESSION
+// ================================
+model EnrollmentTranche {
+  id           String        @id @default(uuid())
+  enrollmentId String
+  
+  // Montant prévu vs payé
+  expectedAmount Float       // Montant attendu selon le plan
+  expectedPercent Float      // % du total attendu
+  actualAmount   Float       @default(0) // Montant réellement payé
+  
+  // Excuse si paiement partiel
+  hasExcuse    Boolean       @default(false)
+  excuseReason String?       @db.Text
+  excuseApproved Boolean?    // Null = en attente, true/false = décision
+  
+  method       PaymentMethod @default(CASH)
+  reference    String?
+  receivedBy   String?
+  notes        String?
+  
+  dueDate      DateTime?     // Date prévue
+  paidAt       DateTime?     // Date réelle du paiement
+  createdAt    DateTime      @default(now())
+
+  // Relations
+  enrollment StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+}
+
+// ================================
+// PROGRESSION MODULE
+// ================================
+model ModuleProgression {
+  id         String   @id @default(uuid())
+  moduleId   String
+  studentId  String
+  progress   Float    @default(0) // 0 à 100
+  startedAt  DateTime @default(now())
+  completedAt DateTime?
+  
+  module     Module   @relation(fields: [moduleId], references: [id])
+  
+  @@unique([moduleId, studentId])
+}
+
+// ================================
+// PROGRESSION COURS
+// ================================
+model CourseProgression {
+  id         String   @id @default(uuid())
+  courseId   String
+  studentId  String
+  progress   Float    @default(0) // 0 à 100
+  timeSpent  Int      @default(0) // Minutes passées
+  startedAt  DateTime @default(now())
+  completedAt DateTime?
+  lastAccessedAt DateTime @default(now())
+  
+  course     Course   @relation(fields: [courseId], references: [id])
+  
+  @@unique([courseId, studentId])
+}
+
+// ================================
+// MODÈLES EXISTANTS (mis à jour)
+// ================================
+
+model Classroom {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  teacherId   String
+  price       Float    @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  teacher           User               @relation("TeacherClassrooms", fields: [teacherId], references: [id])
+  studentClassrooms StudentClassroom[]
+  lessons           Lesson[]
+  payments          Payment[]
+}
+
+model StudentClassroom {
+  id          String   @id @default(uuid())
+  studentId   String
+  classroomId String
+  joinedAt    DateTime @default(now())
+
+  // Relations
+  student   User      @relation(fields: [studentId], references: [id])
+  classroom Classroom @relation(fields: [classroomId], references: [id])
+
+  @@unique([studentId, classroomId])
+}
+
+model Lesson {
+  id          String    @id @default(uuid())
+  classroomId String
+  courseId    String?   // Lien optionnel vers un cours de module
+  title       String?
+  summary     String?   @db.Text
+  topics      String[]
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+
+  // Relations
+  classroom         Classroom          @relation(fields: [classroomId], references: [id])
+  course            Course?            @relation(fields: [courseId], references: [id])
+  quizzes           Quiz[]
+  comprehensionLogs ComprehensionLog[]
+  sessionNotes      SessionNote[]
+}
+
+model Quiz {
+  id            String   @id @default(uuid())
+  lessonId      String
+  question      String
+  options       String[]
+  correctAnswer String
+  createdAt     DateTime @default(now())
+
+  // Relations
+  lesson    Lesson         @relation(fields: [lessonId], references: [id])
+  responses QuizResponse[]
+}
+
+model QuizResponse {
+  id        String   @id @default(uuid())
+  quizId    String
+  studentId String
+  answer    String
+  isCorrect Boolean
+  createdAt DateTime @default(now())
+
+  // Relations
+  quiz    Quiz @relation(fields: [quizId], references: [id])
+  student User @relation(fields: [studentId], references: [id])
+}
+
+model ComprehensionLog {
+  id        String   @id @default(uuid())
+  studentId String
+  lessonId  String
+  score     Int
+  feedback  String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  student User   @relation(fields: [studentId], references: [id])
+  lesson  Lesson @relation(fields: [lessonId], references: [id])
+}
+
+// Payment pour les anciens Classroom (rétrocompatibilité)
+model Payment {
+  id           String        @id @default(uuid())
+  studentId    String
+  classroomId  String
+  totalAmount  Float
+  paidAmount   Float         @default(0)
+  status       PaymentStatus @default(PENDING)
+  dueDate      DateTime?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  // Relations
+  student   User             @relation(fields: [studentId], references: [id])
+  classroom Classroom        @relation(fields: [classroomId], references: [id])
+  tranches  PaymentTranche[]
+
+  @@unique([studentId, classroomId])
+}
+
+model PaymentTranche {
+  id          String        @id @default(uuid())
+  paymentId   String
+  studentId   String
+  amount      Float
+  
+  // Nouveau: Système d'excuse
+  expectedAmount Float?     // Montant attendu
+  hasExcuse   Boolean       @default(false)
+  excuseReason String?      @db.Text
+  excuseApproved Boolean?   // Null = en attente
+  
+  method      PaymentMethod @default(CASH)
+  reference   String?
+  receivedBy  String?
+  notes       String?
+  paidAt      DateTime      @default(now())
+  createdAt   DateTime      @default(now())
+
+  // Relations
+  payment Payment @relation(fields: [paymentId], references: [id])
+  student User    @relation(fields: [studentId], references: [id])
+}
+
+model SessionNote {
+  id        String   @id @default(uuid())
+  lessonId  String
+  studentId String?
+  content   String   @db.Text
+  codeSnippets Json?
+  aiGenerated Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  lesson  Lesson @relation(fields: [lessonId], references: [id])
+  student User?  @relation(fields: [studentId], references: [id])
+}
+
+model RevisionSession {
+  id             String   @id @default(uuid())
+  studentId      String
+  topic          String
+  questionsAsked Json
+  score          Int?
+  duration       Int?
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  // Relations
+  student User @relation(fields: [studentId], references: [id])
+}
