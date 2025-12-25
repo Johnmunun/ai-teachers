@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { openai, SYSTEM_PROMPT } from '@/lib/openai';
 import { z } from 'zod';
+import { getCachedAIResponse, setCachedAIResponse } from '@/lib/cache';
 
 const AnalyzeRequestSchema = z.object({
     transcript: z.string().min(1, 'Le transcript ne peut pas être vide'),
@@ -28,6 +29,19 @@ export async function POST(req: Request) {
             );
         }
 
+        // Vérifier le cache d'abord
+        const cacheKey = `${SYSTEM_PROMPT}:${transcript}`;
+        const cachedResponse = await getCachedAIResponse(cacheKey, 'analyze');
+        
+        if (cachedResponse) {
+            try {
+                const result = JSON.parse(cachedResponse);
+                return NextResponse.json({ ...result, cached: true });
+            } catch {
+                // Si le cache est corrompu, continuer avec l'appel API
+            }
+        }
+
         const completion = await openai.chat.completions.create({
             model: 'gpt-4o',
             messages: [
@@ -49,6 +63,10 @@ export async function POST(req: Request) {
 
         try {
             const result = JSON.parse(content);
+            
+            // Mettre en cache la réponse (24h)
+            await setCachedAIResponse(cacheKey, content, 'analyze', 86400);
+            
             return NextResponse.json(result);
         } catch (parseError) {
             console.error('Erreur de parsing JSON:', parseError);

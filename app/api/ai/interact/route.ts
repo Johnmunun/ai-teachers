@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { openai, INTERACTIVE_SYSTEM_PROMPT, generateSpeech } from '@/lib/openai';
 import { z } from 'zod';
+import { auth } from '@/auth';
+import { buildConversationContext, saveConversationMessage } from '@/lib/ai-memory';
+import { getCachedAIResponse, setCachedAIResponse } from '@/lib/cache';
 
 const REVISION_SYSTEM_PROMPT = `
 Tu es Nathalie, une professeure d'informatique patiente et pédagogue.
@@ -62,6 +65,17 @@ export async function POST(req: Request) {
 
         const { message, context, lessonId } = validation.data;
 
+        // Récupérer l'utilisateur pour la mémoire
+        const session = await auth();
+        const userId = session?.user ? (session.user as any).id : null;
+
+        // Sauvegarder le message utilisateur dans la mémoire
+        if (userId) {
+            await saveConversationMessage(userId, 'user', message, context || 'general', {
+                lessonId,
+            });
+        }
+
         // Vérifier que la clé API OpenAI est configurée
         if (!process.env.OPENAI_API_KEY) {
             return NextResponse.json(
@@ -69,6 +83,11 @@ export async function POST(req: Request) {
                 { status: 500 }
             );
         }
+
+        // Construire le contexte conversationnel
+        const conversationContext = userId 
+            ? await buildConversationContext(userId, context || 'general', 10)
+            : '';
 
         // Choose system prompt based on context
         const systemPrompt = context === 'revision' 
@@ -82,6 +101,31 @@ export async function POST(req: Request) {
         }
         if (context === 'revision') {
             contextMessage += 'Mode révision activé. Sois pédagogue et encourage l\'étudiant. ';
+        }
+        if (conversationContext) {
+            contextMessage += `\n\nHistorique de conversation récent:\n${conversationContext}`;
+        }
+
+        // Vérifier le cache
+        const cacheKey = `${systemPrompt}:${contextMessage}:${message}`;
+        const cachedResponse = await getCachedAIResponse(cacheKey, 'interact');
+        
+        if (cachedResponse) {
+            try {
+                const result = JSON.parse(cachedResponse);
+                if (userId) {
+                    await saveConversationMessage(
+                        userId,
+                        'assistant',
+                        result.text || '',
+                        context || 'general',
+                        { lessonId }
+                    );
+                }
+                return NextResponse.json({ ...result, cached: true });
+            } catch {
+                // Si le cache est corrompu, continuer avec l'appel API
+            }
         }
 
         // Generate Content
@@ -115,6 +159,20 @@ export async function POST(req: Request) {
             return NextResponse.json(
                 { error: 'Format de réponse invalide', content },
                 { status: 500 }
+            );
+        }
+
+        // Mettre en cache la réponse (1h pour les interactions)
+        await setCachedAIResponse(cacheKey, content, 'interact', 3600);
+
+        // Sauvegarder dans la mémoire
+        if (userId) {
+            await saveConversationMessage(
+                userId,
+                'assistant',
+                result.text || content,
+                context || 'general',
+                { lessonId }
             );
         }
 

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/lib/store';
 import { Mic, MicOff, BookOpen, Square, Sparkles, CheckCircle2, FileText, X } from 'lucide-react';
@@ -8,6 +8,7 @@ import ChatInterface from './ChatInterface';
 import { useRouter } from 'next/navigation';
 import { useLocalParticipant } from '@livekit/components-react';
 import { createLocalAudioTrack, Track } from 'livekit-client';
+import debounce from 'lodash.debounce';
 
 interface TeacherPanelProps {
     roomName: string;
@@ -57,7 +58,8 @@ export default function TeacherPanel({ roomName, lessonId }: TeacherPanelProps) 
                     console.log("Activating Nathalie...");
                     chatRef.current?.sendToAi(text);
                 } else {
-                    analyzeText(text);
+                    // Utiliser la version debounced pour réduire les appels API
+                    analyzeTextDebounced(text);
                 }
             };
 
@@ -191,6 +193,21 @@ export default function TeacherPanel({ roomName, lessonId }: TeacherPanelProps) 
             console.error('AI Analysis failed:', err);
         }
     };
+
+    // Debounced version de analyzeText (attendre 2 secondes après le dernier appel)
+    const analyzeTextDebounced = useMemo(
+        () => debounce(async (text: string) => {
+            await analyzeText(text);
+        }, 2000),
+        [addAiSuggestion]
+    );
+
+    // Cleanup du debounce au unmount
+    useEffect(() => {
+        return () => {
+            analyzeTextDebounced.cancel();
+        };
+    }, [analyzeTextDebounced]);
 
     const endSession = async () => {
         if (!lessonId) {
