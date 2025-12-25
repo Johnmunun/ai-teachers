@@ -77,9 +77,9 @@ export default function LandingPage() {
       <div className="fixed inset-0 bg-gradient-to-b from-cyan-500/5 via-transparent to-violet-500/5" />
       
       {/* Floating Orbs */}
-      <div className="fixed top-20 left-10 w-72 h-72 bg-cyan-500/20 rounded-full blur-[100px] float" />
-      <div className="fixed bottom-20 right-10 w-96 h-96 bg-violet-500/20 rounded-full blur-[120px] float" style={{ animationDelay: '-3s' }} />
-      <div className="fixed top-1/2 left-1/2 w-64 h-64 bg-rose-500/10 rounded-full blur-[80px] float" style={{ animationDelay: '-1.5s' }} />
+      <div className="fixed top-20 left-10 w-48 h-48 sm:w-72 sm:h-72 bg-cyan-500/20 rounded-full blur-[100px] float opacity-50 sm:opacity-100" />
+      <div className="fixed bottom-20 right-10 w-64 h-64 sm:w-96 sm:h-96 bg-violet-500/20 rounded-full blur-[120px] float opacity-50 sm:opacity-100" style={{ animationDelay: '-3s' }} />
+      <div className="fixed top-1/2 left-1/2 w-32 h-32 sm:w-64 sm:h-64 bg-rose-500/10 rounded-full blur-[80px] float opacity-30 sm:opacity-100 hidden sm:block" style={{ animationDelay: '-1.5s' }} />
 
       {/* Navigation */}
       <nav className="relative z-50 glass border-b border-white/5">
@@ -124,7 +124,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative z-10 pt-12 sm:pt-20 pb-16 sm:pb-32 px-4 sm:px-6">
+      <section className="relative z-10 pt-8 sm:pt-12 md:pt-20 pb-12 sm:pb-16 md:pb-32 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             {/* Left Content */}
@@ -132,7 +132,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
-              className="text-center lg:text-left"
+              className="text-center lg:text-left order-2 lg:order-1"
             >
               <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 mb-4 sm:mb-6">
                 <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-400" />
@@ -145,42 +145,42 @@ export default function LandingPage() {
                 <span className="gradient-text">Code en Direct</span>
               </h1>
 
-              <p className="text-base sm:text-lg lg:text-xl text-slate-400 mb-6 sm:mb-8 leading-relaxed max-w-xl mx-auto lg:mx-0">
+              <p className="text-sm sm:text-base md:text-lg lg:text-xl text-slate-400 mb-6 sm:mb-8 leading-relaxed max-w-xl mx-auto lg:mx-0 px-2 sm:px-0">
                 Une plateforme révolutionnaire où l'IA vous accompagne en temps réel. 
                 Apprenez à coder avec un assistant virtuel qui s'adapte à votre rythme.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8 sm:mb-12 justify-center lg:justify-start">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8 sm:mb-12 justify-center lg:justify-start px-2 sm:px-0">
                 <Link 
                   href="/login?register=true"
-                  className="btn-glow group flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:shadow-xl hover:shadow-cyan-500/30 transition-all"
+                  className="btn-glow group flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl text-base sm:text-lg font-semibold hover:shadow-xl hover:shadow-cyan-500/30 transition-all w-full sm:w-auto"
                 >
-                  <Play className="w-5 h-5" />
+                  <Play className="w-4 h-4 sm:w-5 sm:h-5" />
                   Rejoindre un cours
-                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
                 <Link 
                   href="#demo"
-                  className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white px-8 py-4 rounded-xl text-lg font-medium hover:bg-white/10 transition-all"
+                  className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl text-base sm:text-lg font-medium hover:bg-white/10 transition-all w-full sm:w-auto"
                 >
-                  <MessageSquare className="w-5 h-5" />
+                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
                   Voir la démo
                 </Link>
               </div>
 
               {/* Stats */}
-              <div className="flex flex-wrap gap-6 sm:gap-12 justify-center lg:justify-start">
-                <div>
-                  <div className="text-3xl font-bold text-white">500+</div>
-                  <div className="text-slate-500 text-sm">Étudiants formés</div>
+              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-4 sm:gap-6 md:gap-12 justify-center lg:justify-start px-2 sm:px-0">
+                <div className="text-center sm:text-left">
+                  <div className="text-2xl sm:text-3xl font-bold text-white">500+</div>
+                  <div className="text-slate-500 text-xs sm:text-sm">Étudiants formés</div>
                 </div>
-                <div>
-                  <div className="text-3xl font-bold text-white">50+</div>
-                  <div className="text-slate-500 text-sm">Cours disponibles</div>
+                <div className="text-center sm:text-left">
+                  <div className="text-2xl sm:text-3xl font-bold text-white">50+</div>
+                  <div className="text-slate-500 text-xs sm:text-sm">Cours disponibles</div>
                 </div>
-                <div>
-                  <div className="text-3xl font-bold text-white">98%</div>
-                  <div className="text-slate-500 text-sm">Satisfaction</div>
+                <div className="text-center sm:text-left col-span-2 sm:col-span-1">
+                  <div className="text-2xl sm:text-3xl font-bold text-white">98%</div>
+                  <div className="text-slate-500 text-xs sm:text-sm">Satisfaction</div>
                 </div>
               </div>
             </motion.div>
@@ -190,7 +190,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="relative"
+              className="relative order-1 lg:order-2 mb-8 lg:mb-0"
             >
               <div className="relative">
                 {/* Glow Effect */}
@@ -199,21 +199,21 @@ export default function LandingPage() {
                 {/* Code Window */}
                 <div className="relative code-block overflow-hidden">
                   {/* Window Header */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-red-500" />
-                      <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                      <div className="w-3 h-3 rounded-full bg-green-500" />
+                  <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b border-white/5">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500" />
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500" />
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500" />
                     </div>
-                    <span className="text-xs text-slate-500 font-mono">main.js</span>
-                    <div className="flex items-center gap-2 text-cyan-400">
-                      <Sparkles className="w-4 h-4 animate-pulse" />
-                      <span className="text-xs">IA Active</span>
+                    <span className="text-[10px] sm:text-xs text-slate-500 font-mono">main.js</span>
+                    <div className="hidden sm:flex items-center gap-2 text-cyan-400">
+                      <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 animate-pulse" />
+                      <span className="text-[10px] sm:text-xs">IA Active</span>
                     </div>
                   </div>
 
                   {/* Code Content */}
-                  <div className="p-6 font-mono text-sm">
+                  <div className="p-4 sm:p-6 font-mono text-xs sm:text-sm">
                     <pre className="text-slate-300 leading-relaxed">
                       {codeSnippet.split('\n').map((line, i) => (
                         <motion.div
@@ -223,8 +223,9 @@ export default function LandingPage() {
                           transition={{ delay: 0.5 + i * 0.1 }}
                           className="flex"
                         >
-                          <span className="text-slate-600 w-8 select-none">{i + 1}</span>
+                          <span className="text-slate-600 w-6 sm:w-8 select-none text-[10px] sm:text-xs">{i + 1}</span>
                           <span 
+                            className="text-[10px] sm:text-xs"
                             dangerouslySetInnerHTML={{ 
                               __html: line
                                 .replace(/(\/\/.*)/g, '<span class="text-slate-500">$1</span>')
@@ -242,20 +243,20 @@ export default function LandingPage() {
                   <div className="absolute inset-0 pointer-events-none scanline overflow-hidden" />
                 </div>
 
-                {/* Floating Badge */}
+                {/* Floating Badge - Hidden on mobile */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.5 }}
-                  className="absolute -bottom-6 -right-6 glass rounded-xl px-4 py-3 flex items-center gap-3"
+                  className="hidden sm:block absolute -bottom-6 -right-6 glass rounded-xl px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3"
                 >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-rose-500 flex items-center justify-center">
-                    <Brain className="w-5 h-5 text-white" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-violet-500 to-rose-500 flex items-center justify-center">
+                    <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                   <div>
-                    <div className="text-white font-medium text-sm">Nathalie IA</div>
-                    <div className="text-emerald-400 text-xs flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <div className="text-white font-medium text-xs sm:text-sm">Nathalie IA</div>
+                    <div className="text-emerald-400 text-[10px] sm:text-xs flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse" />
                       En ligne
                     </div>
                   </div>
@@ -275,10 +276,10 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="text-center mb-8 sm:mb-12 lg:mb-16"
           >
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4">
+            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4">
               Tout ce dont vous avez besoin
             </h2>
-            <p className="text-base sm:text-lg lg:text-xl text-slate-400 max-w-2xl mx-auto px-4">
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl text-slate-400 max-w-2xl mx-auto px-4">
               Une plateforme complète pour enseigner et apprendre le développement
             </p>
           </motion.div>
@@ -291,13 +292,13 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="group relative glass rounded-2xl p-6 hover:border-cyan-500/30 transition-all duration-300"
+                className="group relative glass rounded-xl sm:rounded-2xl p-4 sm:p-6 hover:border-cyan-500/30 transition-all duration-300"
               >
-                <div className={`w-12 h-12 rounded-xl bg-${feature.color}-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                  <feature.icon className={`w-6 h-6 text-${feature.color}-400`} />
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-${feature.color}-500/10 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform`}>
+                  <feature.icon className={`w-5 h-5 sm:w-6 sm:h-6 text-${feature.color}-400`} />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">{feature.title}</h3>
-                <p className="text-slate-400 leading-relaxed">{feature.description}</p>
+                <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">{feature.title}</h3>
+                <p className="text-sm sm:text-base text-slate-400 leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -305,30 +306,30 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="relative z-10 py-24 px-6">
+      <section className="relative z-10 py-12 sm:py-16 md:py-24 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="relative overflow-hidden rounded-3xl"
+            className="relative overflow-hidden rounded-2xl sm:rounded-3xl"
           >
             {/* Background */}
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-violet-600" />
             <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
             
-            <div className="relative px-8 py-16 text-center">
-              <h2 className="text-4xl font-bold text-white mb-4">
+            <div className="relative px-4 sm:px-6 md:px-8 py-12 sm:py-14 md:py-16 text-center">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4">
                 Prêt à commencer votre voyage ?
               </h2>
-              <p className="text-xl text-white/80 mb-8 max-w-xl mx-auto">
+              <p className="text-base sm:text-lg md:text-xl text-white/80 mb-6 sm:mb-8 max-w-xl mx-auto px-2 sm:px-0">
                 Rejoignez des centaines d'étudiants qui apprennent à coder avec l'IA
               </p>
               <Link 
                 href="/login?register=true"
-                className="inline-flex items-center gap-2 bg-white text-slate-900 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-slate-100 transition-all shadow-xl"
+                className="inline-flex items-center justify-center gap-2 bg-white text-slate-900 px-6 sm:px-8 py-3 sm:py-4 rounded-xl text-base sm:text-lg font-semibold hover:bg-slate-100 transition-all shadow-xl w-full sm:w-auto max-w-xs sm:max-w-none mx-auto"
               >
-                <Zap className="w-5 h-5" />
+                <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
                 S'inscrire gratuitement
               </Link>
             </div>
@@ -337,26 +338,26 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-white/5 py-12 px-6">
+      <footer className="relative z-10 border-t border-white/5 py-8 sm:py-12 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-violet-600 flex items-center justify-center">
-                <Code2 className="w-4 h-4 text-white" />
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-violet-600 flex items-center justify-center">
+                <Code2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
               </div>
-              <span className="font-semibold">
+              <span className="font-semibold text-sm sm:text-base">
                 <span className="text-cyan-400">Coding</span>
                 <span className="text-white">Live</span>
               </span>
             </div>
             
-            <div className="flex items-center gap-6 text-sm text-slate-500">
+            <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm text-slate-500">
               <Link href="#" className="hover:text-white transition">Confidentialité</Link>
               <Link href="#" className="hover:text-white transition">Conditions</Link>
               <Link href="#" className="hover:text-white transition">Contact</Link>
             </div>
 
-            <div className="text-sm text-slate-500">
+            <div className="text-xs sm:text-sm text-slate-500 text-center sm:text-left">
               © 2024 CodingLive. Tous droits réservés.
             </div>
           </div>
