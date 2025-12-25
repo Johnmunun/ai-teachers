@@ -69,6 +69,15 @@ async function apprendreLeProgramming() {
   return "🎓 Développeur Certifié!";
 }`;
 
+const codeSnippetMobile = `// CodingLive - IA
+async function apprendre() {
+  const etudiant = await rejoindreClasse();
+  while (etudiant.motivation) {
+    await ia.expliquer();
+    etudiant.niveau++;
+  }
+}`;
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#030712] overflow-hidden">
@@ -150,21 +159,23 @@ export default function LandingPage() {
                 Apprenez à coder avec un assistant virtuel qui s'adapte à votre rythme.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8 sm:mb-12 justify-center lg:justify-start px-2 sm:px-0">
+              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-4 mb-8 sm:mb-12 justify-center lg:justify-start px-2 sm:px-0">
                 <Link 
                   href="/login?register=true"
-                  className="btn-glow group flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl text-base sm:text-lg font-semibold hover:shadow-xl hover:shadow-cyan-500/30 transition-all w-full sm:w-auto"
+                  className="btn-glow group flex items-center justify-center gap-1.5 sm:gap-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white px-4 sm:px-8 py-2.5 sm:py-4 rounded-lg sm:rounded-xl text-sm sm:text-lg font-semibold hover:shadow-xl hover:shadow-cyan-500/30 transition-all w-full sm:w-auto"
                 >
-                  <Play className="w-4 h-4 sm:w-5 sm:h-5" />
-                  Rejoindre un cours
-                  <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
+                  <Play className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                  <span className="sm:hidden">Rejoindre</span>
+                  <span className="hidden sm:inline">Rejoindre un cours</span>
+                  <ChevronRight className="w-3.5 h-3.5 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform hidden sm:block" />
                 </Link>
                 <Link 
                   href="#demo"
-                  className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl text-base sm:text-lg font-medium hover:bg-white/10 transition-all w-full sm:w-auto"
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 bg-white/5 border border-white/10 text-white px-4 sm:px-8 py-2.5 sm:py-4 rounded-lg sm:rounded-xl text-sm sm:text-lg font-medium hover:bg-white/10 transition-all w-full sm:w-auto"
                 >
-                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
-                  Voir la démo
+                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                  <span className="sm:hidden">Démo</span>
+                  <span className="hidden sm:inline">Voir la démo</span>
                 </Link>
               </div>
 
@@ -190,42 +201,67 @@ export default function LandingPage() {
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="relative order-1 lg:order-2 mb-8 lg:mb-0"
+              className="relative order-1 lg:order-2 mb-6 sm:mb-8 lg:mb-0"
             >
-              <div className="relative">
+              <div className="relative max-w-full">
                 {/* Glow Effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-violet-500/20 rounded-2xl blur-2xl" />
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-violet-500/20 rounded-xl sm:rounded-2xl blur-xl sm:blur-2xl" />
                 
                 {/* Code Window */}
                 <div className="relative code-block overflow-hidden">
                   {/* Window Header */}
-                  <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b border-white/5">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500" />
-                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500" />
-                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500" />
+                  <div className="flex items-center justify-between px-2.5 sm:px-4 py-1.5 sm:py-3 border-b border-white/5">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-red-500" />
+                      <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-yellow-500" />
+                      <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-green-500" />
                     </div>
-                    <span className="text-[10px] sm:text-xs text-slate-500 font-mono">main.js</span>
+                    <span className="text-[9px] sm:text-xs text-slate-500 font-mono">main.js</span>
                     <div className="hidden sm:flex items-center gap-2 text-cyan-400">
                       <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 animate-pulse" />
                       <span className="text-[10px] sm:text-xs">IA Active</span>
                     </div>
                   </div>
 
-                  {/* Code Content */}
-                  <div className="p-4 sm:p-6 font-mono text-xs sm:text-sm">
-                    <pre className="text-slate-300 leading-relaxed">
-                      {codeSnippet.split('\n').map((line, i) => (
+                  {/* Code Content - Mobile version */}
+                  <div className="p-2.5 sm:p-4 md:p-6 font-mono">
+                    {/* Mobile code snippet (hidden on desktop) */}
+                    <pre className="text-slate-300 leading-tight sm:hidden">
+                      {codeSnippetMobile.split('\n').map((line, i) => (
                         <motion.div
-                          key={i}
+                          key={`mobile-${i}`}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.5 + i * 0.1 }}
                           className="flex"
                         >
-                          <span className="text-slate-600 w-6 sm:w-8 select-none text-[10px] sm:text-xs">{i + 1}</span>
+                          <span className="text-slate-600 w-5 select-none text-[9px]">{i + 1}</span>
                           <span 
-                            className="text-[10px] sm:text-xs"
+                            className="text-[9px] break-words"
+                            dangerouslySetInnerHTML={{ 
+                              __html: line
+                                .replace(/(\/\/.*)/g, '<span class="text-slate-500">$1</span>')
+                                .replace(/(".*?")/g, '<span class="text-emerald-400">$1</span>')
+                                .replace(/(async|await|function|const|while|return|if)/g, '<span class="text-violet-400">$1</span>')
+                                .replace(/(\w+)(?=\()/g, '<span class="text-cyan-400">$1</span>')
+                            }}
+                          />
+                        </motion.div>
+                      ))}
+                    </pre>
+                    {/* Desktop code snippet (hidden on mobile) */}
+                    <pre className="hidden sm:block text-slate-300 leading-relaxed">
+                      {codeSnippet.split('\n').map((line, i) => (
+                        <motion.div
+                          key={`desktop-${i}`}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.5 + i * 0.1 }}
+                          className="flex"
+                        >
+                          <span className="text-slate-600 w-6 md:w-8 select-none text-[10px] md:text-xs">{i + 1}</span>
+                          <span 
+                            className="text-[10px] md:text-xs"
                             dangerouslySetInnerHTML={{ 
                               __html: line
                                 .replace(/(\/\/.*)/g, '<span class="text-slate-500">$1</span>')
@@ -248,14 +284,14 @@ export default function LandingPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.5 }}
-                  className="hidden sm:block absolute -bottom-6 -right-6 glass rounded-xl px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3"
+                  className="hidden sm:block absolute -bottom-4 sm:-bottom-6 -right-4 sm:-right-6 glass rounded-lg sm:rounded-xl px-2.5 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3"
                 >
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-violet-500 to-rose-500 flex items-center justify-center">
-                    <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-violet-500 to-rose-500 flex items-center justify-center">
+                    <Brain className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
                   </div>
                   <div>
                     <div className="text-white font-medium text-xs sm:text-sm">Nathalie IA</div>
-                    <div className="text-emerald-400 text-[10px] sm:text-xs flex items-center gap-1">
+                    <div className="text-emerald-400 text-[9px] sm:text-xs flex items-center gap-1">
                       <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse" />
                       En ligne
                     </div>
