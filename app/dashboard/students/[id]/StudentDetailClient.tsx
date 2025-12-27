@@ -1,7 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { formatMoney } from '@/lib/currency';
+import AddPaymentModal from '@/components/AddPaymentModal';
+import EditStudentModal from '@/components/EditStudentModal';
+import DeleteStudentModal from '@/components/DeleteStudentModal';
 import {
   ArrowLeft,
   Mail,
@@ -15,7 +19,10 @@ import {
   CheckCircle2,
   XCircle,
   FileText,
-  Download
+  Download,
+  Plus,
+  Edit,
+  Trash2
 } from 'lucide-react';
 
 interface StudentDetailClientProps {
@@ -34,6 +41,22 @@ interface StudentDetailClientProps {
 export default function StudentDetailClient({ student, stats }: StudentDetailClientProps) {
   const enrollments = student.studentClassrooms;
   const payments = student.payments;
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleAddPayment = (payment: any) => {
+    setSelectedPayment(payment);
+    setIsModalOpen(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    setRefreshKey(prev => prev + 1);
+    // Recharger la page pour mettre à jour les paiements
+    window.location.reload();
+  };
 
   return (
     <div className="p-8">
@@ -75,6 +98,20 @@ export default function StudentDetailClient({ student, stats }: StudentDetailCli
           </div>
 
           <div className="flex gap-3">
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-slate-300 rounded-lg hover:bg-white/10 transition"
+            >
+              <Edit className="w-4 h-4" />
+              Modifier
+            </button>
+            <button
+              onClick={() => setIsDeleteModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500/20 transition"
+            >
+              <Trash2 className="w-4 h-4" />
+              Supprimer
+            </button>
             {enrollments[0] && (
               <Link
                 href={`/api/grades/bulletin?classroomId=${enrollments[0].classroom.id}&studentId=${student.id}`}
@@ -200,14 +237,17 @@ export default function StudentDetailClient({ student, stats }: StudentDetailCli
 
         {/* Payments */}
         <div className="space-y-6">
-          <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-emerald-400" />
-            Paiements
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-emerald-400" />
+              Paiements
+            </h2>
+          </div>
 
           {payments.length > 0 ? (
             payments.map((payment: any) => {
               const percent = (payment.paidAmount / payment.totalAmount) * 100;
+              const remaining = payment.totalAmount - payment.paidAmount;
               
               return (
                 <div key={payment.id} className="glass rounded-xl p-6">
@@ -251,7 +291,7 @@ export default function StudentDetailClient({ student, stats }: StudentDetailCli
 
                   {/* Tranches */}
                   {payment.tranches.length > 0 && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 mb-4">
                       <p className="text-xs text-slate-500 uppercase tracking-wider">
                         Tranches ({payment.tranches.length})
                       </p>
@@ -265,6 +305,13 @@ export default function StudentDetailClient({ student, stats }: StudentDetailCli
                             <span className="text-slate-400">
                               {new Date(tranche.paidAt).toLocaleDateString('fr-FR')}
                             </span>
+                            {tranche.method && (
+                              <span className="text-xs text-slate-500">
+                                ({tranche.method === 'CASH' ? 'Espèces' : 
+                                  tranche.method === 'MOBILE_MONEY' ? 'Mobile Money' : 
+                                  tranche.method === 'BANK_TRANSFER' ? 'Virement' : 'Autre'})
+                              </span>
+                            )}
                           </div>
                           <span className="text-emerald-400 font-medium">
                             +{formatMoney(tranche.amount)}
@@ -272,6 +319,17 @@ export default function StudentDetailClient({ student, stats }: StudentDetailCli
                         </div>
                       ))}
                     </div>
+                  )}
+
+                  {/* Add Payment Button */}
+                  {remaining > 0 && (
+                    <button
+                      onClick={() => handleAddPayment(payment)}
+                      className="w-full mt-4 px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-500 text-white font-medium hover:from-cyan-600 hover:to-violet-600 transition flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Ajouter un paiement ({formatMoney(remaining)} restant)
+                    </button>
                   )}
                 </div>
               );
@@ -283,6 +341,49 @@ export default function StudentDetailClient({ student, stats }: StudentDetailCli
             </div>
           )}
         </div>
+
+        {/* Add Payment Modal */}
+        {selectedPayment && (
+          <AddPaymentModal
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setSelectedPayment(null);
+            }}
+            payment={selectedPayment}
+            onSuccess={handlePaymentSuccess}
+          />
+        )}
+
+        {/* Edit Student Modal */}
+        <EditStudentModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          student={{
+            id: student.id,
+            name: student.name,
+            email: student.email,
+            phone: student.phone,
+            isBlocked: student.isBlocked ?? false
+          }}
+          onSuccess={() => {
+            window.location.reload();
+          }}
+        />
+
+        {/* Delete Student Modal */}
+        <DeleteStudentModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          student={{
+            id: student.id,
+            name: student.name,
+            email: student.email
+          }}
+          onSuccess={() => {
+            window.location.href = '/dashboard/students';
+          }}
+        />
       </div>
     </div>
   );

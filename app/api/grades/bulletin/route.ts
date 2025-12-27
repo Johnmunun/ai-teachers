@@ -3,7 +3,15 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
+    let searchParams = new URLSearchParams();
+    try {
+      if (req.url) {
+        const url = new URL(req.url);
+        searchParams = url.searchParams;
+      }
+    } catch (error) {
+      console.warn('Failed to parse URL from request:', error);
+    }
     const classroomId = searchParams.get('classroomId');
     const studentId = searchParams.get('studentId');
 

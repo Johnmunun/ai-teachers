@@ -270,7 +270,15 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
         }
 
-        const { searchParams } = new URL(req.url);
+        let searchParams = new URLSearchParams();
+        try {
+          if (req.url) {
+            const url = new URL(req.url);
+            searchParams = url.searchParams;
+          }
+        } catch (error) {
+          console.warn('Failed to parse URL from request:', error);
+        }
         const studentId = searchParams.get('studentId');
         const trainingSessionId = searchParams.get('trainingSessionId');
 

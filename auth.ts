@@ -16,8 +16,29 @@ async function getUser(email: string): Promise<User | null> {
     }
 }
 
+// Configuration de l'URL de base pour NextAuth
+const getBaseUrl = () => {
+    // Priorité: AUTH_URL > NEXTAUTH_URL > valeur par défaut
+    const authUrl = process.env.AUTH_URL || process.env.NEXTAUTH_URL;
+    if (authUrl) {
+        try {
+            new URL(authUrl); // Valider que c'est une URL valide
+            return authUrl;
+        } catch {
+            console.warn(`Invalid AUTH_URL/NEXTAUTH_URL: ${authUrl}, using default`);
+        }
+    }
+    // Valeur par défaut pour le développement local
+    return process.env.NODE_ENV === 'production' 
+        ? 'https://your-domain.com' // À remplacer en production
+        : 'http://localhost:3000';
+};
+
 export const { auth, signIn, signOut, handlers } = NextAuth({
     ...authConfig,
+    secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+    trustHost: true, // Permet à NextAuth de faire confiance aux headers de proxy
+    basePath: '/api/auth',
     providers: [
         Credentials({
             async authorize(credentials) {

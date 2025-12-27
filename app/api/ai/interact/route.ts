@@ -6,18 +6,43 @@ import { buildConversationContext, saveConversationMessage } from '@/lib/ai-memo
 import { getCachedAIResponse, setCachedAIResponse } from '@/lib/cache';
 
 const REVISION_SYSTEM_PROMPT = `
-Tu es Nathalie, une professeure d'informatique patiente et pédagogue.
-Tu aides les étudiants à réviser leurs cours de programmation.
+Tu es Nathalie (ou Nath), une professeure d'informatique experte, professionnelle et bienveillante.
+Tu es l'assistante pédagogique IA qui aide les étudiants à réviser leurs cours de programmation.
 
-RÈGLES IMPORTANTES :
-1. Utilise un langage simple et accessible
-2. Donne des exemples concrets et visuels
+TON IDENTITÉ :
+- Nom : Nathalie (ou Nath pour les intimes)
+- Rôle : Professeure assistante IA spécialisée en programmation
+- Ton : Professionnel, pédagogue, encourageant, clair et bienveillant
+- Tu connais parfaitement ton rôle et tu es fière d'aider les étudiants
+
+RÈGLES DE CONTEXTE :
+1. TU RÉPONDS À TOUTES LES QUESTIONS LIÉES À LA PROGRAMMATION, AUX FRAMEWORKS, BIBLIOTHÈQUES, OUTILS DE DÉVELOPPEMENT ET AUX COURS DU MODULE
+2. ACCEPTE les questions sur :
+   - Langages de programmation (JavaScript, Python, HTML, CSS, etc.)
+   - Frameworks et bibliothèques (React, Vue, Angular, Bootstrap, Tailwind, etc.)
+   - Outils de développement (Git, npm, webpack, etc.)
+   - Concepts informatiques (algorithme, structure de données, etc.)
+   - Histoire et contexte des technologies (qui a créé, quand, pourquoi)
+   - Bonnes pratiques et méthodologies
+3. REFUSE UNIQUEMENT les questions complètement hors sujet (sport, cuisine, actualité non-technique, etc.)
+4. EXCEPTION : Un simple "bonjour", "salut", "merci", "au revoir" est accepté - réponds brièvement et professionnellement
+
+RÈGLES PÉDAGOGIQUES :
+1. Utilise un langage professionnel mais accessible
+2. Donne des exemples concrets et visuels avec du code
 3. Encourage l'étudiant et sois positif
-4. Si l'étudiant demande un quiz, génère une question QCM
+4. Si l'étudiant demande un quiz, génère une question QCM sur les concepts du module
+5. Utilise le prénom de l'étudiant quand tu le connais (il sera fourni dans le contexte)
+
+CAPACITÉS DE CODE :
+- Tu es experte en HTML, CSS, JavaScript et programmation web
+- Tu peux écrire du code complet, fonctionnel et bien commenté
+- Le code doit être clair, avec des noms de variables explicites
+- Ajoute toujours des commentaires pédagogiques
 
 FORMAT DE RÉPONSE JSON OBLIGATOIRE :
 {
-  "text": "Ta réponse textuelle (claire et pédagogique)",
+  "text": "Ta réponse textuelle (professionnelle et pédagogique)",
   "type": "explanation" | "example" | "quiz",
   "code": {  // OPTIONNEL - pour les exemples de code
     "html": "...",
@@ -34,21 +59,25 @@ FORMAT DE RÉPONSE JSON OBLIGATOIRE :
 }
 
 STYLE DE CODE :
-- Si tu génères du code, rends-le clair et bien commenté
-- Utilise des noms de variables explicites
-- Ajoute des commentaires pour expliquer chaque étape
+- Code complet et fonctionnel
+- Commentaires pédagogiques explicatifs
+- Noms de variables explicites
+- Structure claire et lisible
 
 POUR LES QUIZ :
-- Questions claires et précises
+- Questions sur les concepts du module uniquement
 - 4 options de réponse
 - Une seule bonne réponse
-- Évite les questions trop faciles ou trop difficiles
+- Niveau adapté au module
 `;
 
 const InteractRequestSchema = z.object({
     message: z.string().min(1, 'Le message ne peut pas être vide'),
     context: z.enum(['revision', 'classroom']).optional(),
     lessonId: z.string().uuid().optional(),
+    forceAudio: z.boolean().optional(), // Force l'audio pour le prof
+    forceBroadcast: z.boolean().optional(), // Force le broadcast pour le prof
+    generateAudioOnly: z.boolean().optional(), // Génère seulement l'audio
 });
 
 export async function POST(req: Request) {
@@ -63,7 +92,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const { message, context, lessonId } = validation.data;
+        const { message, context, lessonId, forceAudio, forceBroadcast, generateAudioOnly } = validation.data;
 
         // Récupérer l'utilisateur pour la mémoire
         const session = await auth();
@@ -94,14 +123,71 @@ export async function POST(req: Request) {
             ? REVISION_SYSTEM_PROMPT 
             : INTERACTIVE_SYSTEM_PROMPT;
 
+        // Récupérer les informations de l'utilisateur
+        let userName = null;
+        let userEmail = null;
+        if (userId && session?.user) {
+            userName = (session.user as any).name;
+            userEmail = (session.user as any).email;
+        }
+
+        // Récupérer les cours du module/lesson pour limiter le contexte
+        let lessonContent = '';
+        let moduleCourses: any[] = [];
+        
+        if (lessonId && userId) {
+            try {
+                const { prisma } = await import('@/lib/prisma');
+                const lesson = await prisma.lesson.findUnique({
+                    where: { id: lessonId },
+                    include: {
+                        classroom: {
+                            include: {
+                                studentClassrooms: {
+                                    where: { studentId: userId }
+                                }
+                            }
+                        },
+                        sessionNotes: {
+                            orderBy: { createdAt: 'asc' },
+                            take: 10
+                        }
+                    }
+                });
+
+                if (lesson && lesson.classroom.studentClassrooms.length > 0) {
+                    lessonContent = `Séance : "${lesson.title || 'Sans titre'}"\n`;
+                    if (lesson.topics && lesson.topics.length > 0) {
+                        lessonContent += `Sujets abordés : ${(lesson.topics as string[]).join(', ')}\n`;
+                    }
+                    if (lesson.sessionNotes && lesson.sessionNotes.length > 0) {
+                        const notes = lesson.sessionNotes.map(n => n.content).join('\n');
+                        lessonContent += `Notes de la séance :\n${notes}\n`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching lesson content:', error);
+            }
+        }
+
         // Build context message
         let contextMessage = '';
-        if (lessonId) {
-            contextMessage = `L'étudiant révise une séance spécifique (ID: ${lessonId}). `;
+        
+        if (userName) {
+            contextMessage += `L'étudiant s'appelle ${userName}. `;
         }
+        
         if (context === 'revision') {
-            contextMessage += 'Mode révision activé. Sois pédagogue et encourage l\'étudiant. ';
+            contextMessage += 'Mode révision activé. Tu es Nathalie, professeure assistante IA. ';
         }
+        
+        if (lessonId && lessonContent) {
+            contextMessage += `\n\nCONTEXTE DU COURS À RÉVISER (IMPORTANT - RESTE UNIQUEMENT DANS CE CONTEXTE) :\n${lessonContent}\n`;
+            contextMessage += 'IMPORTANT : Ne réponds QUE sur les sujets abordés dans ce cours. Si l\'étudiant pose une question hors contexte, redirige-le poliment vers les sujets du cours.';
+        } else if (lessonId) {
+            contextMessage += `L'étudiant révise une séance spécifique (ID: ${lessonId}). `;
+        }
+        
         if (conversationContext) {
             contextMessage += `\n\nHistorique de conversation récent:\n${conversationContext}`;
         }
@@ -128,9 +214,16 @@ export async function POST(req: Request) {
             }
         }
 
-        // Generate Content
+        // Generate Content - Optimisé pour la vitesse
+        // Utilisation de gpt-4o-mini pour les réponses rapides (3-5x plus rapide que gpt-4o)
+        // Pour les questions complexes nécessitant du code, on peut utiliser gpt-4o
+        const needsAdvancedModel = message.toLowerCase().includes('code') || 
+                                   message.toLowerCase().includes('écris') ||
+                                   message.toLowerCase().includes('génère') ||
+                                   message.toLowerCase().includes('créer');
+        
         const completion = await openai.chat.completions.create({
-            model: 'gpt-4o',
+            model: needsAdvancedModel ? 'gpt-4o' : 'gpt-4o-mini', // Mini pour la vitesse, 4o pour le code complexe
             messages: [
                 { role: 'system', content: systemPrompt },
                 { 
@@ -139,8 +232,8 @@ export async function POST(req: Request) {
                 },
             ],
             response_format: { type: 'json_object' },
-            temperature: 0.7,
-            max_tokens: 1500,
+            temperature: 0.5, // Réduit de 0.7 à 0.5 pour des réponses plus directes et rapides
+            max_tokens: 1200, // Réduit de 1500 à 1200 pour accélérer
         });
 
         const content = completion.choices[0]?.message?.content;
@@ -176,15 +269,35 @@ export async function POST(req: Request) {
             );
         }
 
-        // Generate Audio if needed (only for live classroom, not revision)
+        // Generate Audio - TOUJOURS pour le prof en mode classroom
         let audioBase64 = null;
-        if (result.shouldSpeak && result.text && context !== 'revision') {
+        const shouldGenerateAudio = forceAudio || 
+                                   (result.shouldSpeak && result.text && context !== 'revision') ||
+                                   (context === 'classroom' && forceAudio !== false);
+        
+        if (shouldGenerateAudio && result.text && !generateAudioOnly) {
             try {
                 audioBase64 = await generateSpeech(result.text);
             } catch (audioErr) {
                 console.error('TTS Error:', audioErr);
                 // Continue sans audio si la génération échoue
             }
+        }
+
+        // Si generateAudioOnly, retourner seulement l'audio
+        if (generateAudioOnly && result.text) {
+            try {
+                audioBase64 = await generateSpeech(result.text);
+                return NextResponse.json({ audio: audioBase64 });
+            } catch (audioErr) {
+                console.error('TTS Error:', audioErr);
+                return NextResponse.json({ error: 'Erreur génération audio' }, { status: 500 });
+            }
+        }
+
+        // Forcer broadcast pour le prof
+        if (forceBroadcast) {
+            result.broadcast = true;
         }
 
         return NextResponse.json({ 

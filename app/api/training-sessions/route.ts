@@ -12,7 +12,15 @@ export async function GET(req: Request) {
 
     const userId = (session.user as any).id;
     const role = (session.user as any).role;
-    const { searchParams } = new URL(req.url);
+    let searchParams = new URLSearchParams();
+    try {
+      if (req.url) {
+        const url = new URL(req.url);
+        searchParams = url.searchParams;
+      }
+    } catch (error) {
+      console.warn('Failed to parse URL from request:', error);
+    }
     const activeOnly = searchParams.get('active') === 'true';
 
     let trainingSessions;

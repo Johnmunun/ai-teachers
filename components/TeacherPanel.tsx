@@ -5,6 +5,7 @@ import { useStore } from '@/lib/store';
 import { Mic, MicOff, BookOpen, Square, Sparkles, CheckCircle2, FileText, X } from 'lucide-react';
 import AICoTeacher from './AICoTeacher';
 import ChatInterface from './ChatInterface';
+import StudentsList from './StudentsList';
 import { useRouter } from 'next/navigation';
 import { useLocalParticipant } from '@livekit/components-react';
 import { createLocalAudioTrack, Track } from 'livekit-client';
@@ -32,53 +33,118 @@ export default function TeacherPanel({ roomName, lessonId }: TeacherPanelProps) 
     const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
     const { addAiSuggestion } = useStore();
     const chatRef = useRef<any>(null);
-    const recognitionRef = useRef<any>(null);
     const isListeningRef = useRef(false);
     
     // LiveKit hooks
     const { localParticipant } = useLocalParticipant();
     const [isMicEnabled, setIsMicEnabled] = useState(false);
 
-    // ... (Keep existing useEffect & toggleMicrophone & analyzeText logic EXACTLY as is) ...
-    // RE-INJECTING LOGIC TO ENSURE INTEGRITY
-    useEffect(() => {
-        if (typeof window !== 'undefined' && (window as any).webkitSpeechRecognition) {
-            const recognition = new (window as any).webkitSpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = false;
-            recognition.lang = 'fr-FR';
+    // Utiliser Whisper pour la transcription au lieu de webkitSpeechRecognition
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-            recognition.onresult = async (event: any) => {
-                const lastIndex = event.results.length - 1;
-                const text = event.results[lastIndex][0].transcript;
-                console.log('Transcript:', text);
+    useEffect(() => {
+        if (isListening && typeof window !== 'undefined' && navigator.mediaDevices) {
+            // Démarrer l'enregistrement audio pour Whisper
+            const startRecording = async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: 'audio/webm;codecs=opus'
+                    });
+                    
+                    mediaRecorderRef.current = mediaRecorder;
+                    audioChunksRef.current = [];
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            audioChunksRef.current.push(event.data);
+                        }
+                    };
+
+                    mediaRecorder.onstop = async () => {
+                        // Envoyer l'audio à Whisper pour transcription
+                        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                        await transcribeAudio(audioBlob);
+                        audioChunksRef.current = [];
+                    };
+
+                    // Démarrer l'enregistrement
+                    mediaRecorder.start();
+                    
+                    // Envoyer des chunks toutes les 3 secondes pour transcription continue
+                    recordingIntervalRef.current = setInterval(() => {
+                        if (mediaRecorder.state === 'recording') {
+                            mediaRecorder.stop();
+                            mediaRecorder.start(); // Redémarrer pour le prochain chunk
+                        }
+                    }, 3000);
+
+                } catch (error) {
+                    console.error('Error accessing microphone:', error);
+                    setIsListening(false);
+                }
+            };
+
+            startRecording();
+        } else if (!isListening && mediaRecorderRef.current) {
+            // Arrêter l'enregistrement
+            if (recordingIntervalRef.current) {
+                clearInterval(recordingIntervalRef.current);
+                recordingIntervalRef.current = null;
+            }
+            if (mediaRecorderRef.current.state !== 'inactive') {
+                mediaRecorderRef.current.stop();
+                mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        return () => {
+            if (recordingIntervalRef.current) {
+                clearInterval(recordingIntervalRef.current);
+            }
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                mediaRecorderRef.current.stop();
+                mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, [isListening]);
+
+    const transcribeAudio = async (audioBlob: Blob) => {
+        try {
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.webm');
+
+            const response = await fetch('/api/ai/transcribe', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error('Transcription failed');
+            }
+
+            const data = await response.json();
+            const text = data.text?.trim();
+
+            if (text) {
+                console.log('Whisper Transcript:', text);
                 setTranscript((prev) => prev + ' ' + text);
 
-                if (text.toLowerCase().includes('nathalie')) {
-                    console.log("Activating Nathalie...");
-                    chatRef.current?.sendToAi(text);
+                // Si le texte contient "nathalie", activer Nathalie
+                if (text.toLowerCase().includes('nathalie') || text.toLowerCase().includes('nath')) {
+                    console.log("Activating Nathalie via Whisper...");
+                    chatRef.current?.sendToAi(text, true); // true = isTeacher
                 } else {
-                    // Utiliser la version debounced pour réduire les appels API
+                    // Analyser le texte pour suggestions
                     analyzeTextDebounced(text);
                 }
-            };
-
-            recognition.onend = () => {
-                if (isListeningRef.current) {
-                    try { recognitionRef.current.start(); } catch (e) { }
-                }
-            };
-            recognition.onerror = (event: any) => {
-                if (event.error === 'no-speech' || event.error === 'aborted') {
-                    // Ignore benign errors
-                    return;
-                }
-                console.warn('Speech recognition error:', event.error);
-            };
-
-            recognitionRef.current = recognition;
+            }
+        } catch (error) {
+            console.error('Error transcribing audio:', error);
         }
-    }, []);
+    };
 
     // Toggle LiveKit microphone
     const toggleLiveKitMicrophone = async () => {
@@ -127,20 +193,9 @@ export default function TeacherPanel({ roomName, lessonId }: TeacherPanelProps) 
         // Toggle LiveKit microphone first
         await toggleLiveKitMicrophone();
         
-        // Then toggle speech recognition
-        if (isListeningRef.current) {
-            recognitionRef.current?.stop();
-            isListeningRef.current = false;
-            setIsListening(false);
-        } else {
-            try { 
-                recognitionRef.current?.start(); 
-                isListeningRef.current = true;
-                setIsListening(true);
-            } catch (e) {
-                console.error('Failed to start speech recognition:', e);
-            }
-        }
+        // Then toggle Whisper transcription
+        setIsListening(!isListening);
+        isListeningRef.current = !isListening;
     };
 
     // Initialize microphone on mount and listen for track changes

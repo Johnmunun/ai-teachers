@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { formatMoney } from '@/lib/currency';
+import EditClassroomModal from '@/components/EditClassroomModal';
 import {
   ArrowLeft,
   BookOpen,
@@ -14,7 +16,9 @@ import {
   Trash2,
   CheckCircle2,
   Clock,
-  FileText
+  FileText,
+  Edit,
+  Settings
 } from 'lucide-react';
 
 interface ClassroomDetailClientProps {
@@ -28,6 +32,14 @@ export default function ClassroomDetailClient({
   addStudentAction, 
   removeStudentAction 
 }: ClassroomDetailClientProps) {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleEditSuccess = () => {
+    setRefreshKey(prev => prev + 1);
+    window.location.reload();
+  };
+
   return (
     <div className="p-8">
       {/* Header */}
@@ -47,13 +59,22 @@ export default function ClassroomDetailClient({
               <p className="text-slate-400">{classroom.description}</p>
             )}
           </div>
-          <Link
-            href={`/classroom/${classroom.id}/start`}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-emerald-500/25 transition-all"
-          >
-            <Play className="w-5 h-5" />
-            Démarrer une session
-          </Link>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-slate-300 rounded-xl hover:bg-white/10 transition"
+            >
+              <Edit className="w-4 h-4" />
+              Modifier
+            </button>
+            <Link
+              href={`/classroom/${classroom.id}/start`}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-emerald-500/25 transition-all"
+            >
+              <Play className="w-5 h-5" />
+              Démarrer une session
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -252,6 +273,19 @@ export default function ClassroomDetailClient({
           </div>
         </div>
       </div>
+
+      <EditClassroomModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        classroom={{
+          id: classroom.id,
+          title: classroom.title,
+          description: classroom.description,
+          price: classroom.price,
+          isActive: classroom.isActive ?? true
+        }}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
 }

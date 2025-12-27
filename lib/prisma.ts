@@ -4,15 +4,26 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 // Configuration avec connection pooling optimisé
 const databaseUrl = process.env.DATABASE_URL;
-const optimizedUrl = databaseUrl?.includes('?')
-  ? `${databaseUrl}&connection_limit=10&pool_timeout=20`
-  : `${databaseUrl}?connection_limit=10&pool_timeout=20`;
+let optimizedUrl: string | undefined;
+
+if (databaseUrl) {
+  try {
+    // Valider que DATABASE_URL est une URL valide
+    new URL(databaseUrl);
+    optimizedUrl = databaseUrl.includes('?')
+      ? `${databaseUrl}&connection_limit=10&pool_timeout=20`
+      : `${databaseUrl}?connection_limit=10&pool_timeout=20`;
+  } catch (error) {
+    console.warn('Invalid DATABASE_URL format:', error);
+    optimizedUrl = undefined;
+  }
+}
 
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
-    datasources: databaseUrl
+    datasources: optimizedUrl
       ? {
           db: {
             url: optimizedUrl,

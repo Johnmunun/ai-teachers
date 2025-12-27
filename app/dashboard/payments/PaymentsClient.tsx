@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatMoney, getCurrency } from '@/lib/currency';
+import AddPaymentModal from '@/components/AddPaymentModal';
 import {
   CreditCard,
   Calendar,
@@ -10,7 +11,8 @@ import {
   AlertCircle,
   TrendingUp,
   Wallet,
-  Receipt
+  Receipt,
+  Plus
 } from 'lucide-react';
 
 interface PaymentsClientProps {
@@ -246,6 +248,7 @@ function TeacherPaymentsView({ payments, stats }: { payments: any[]; stats: any 
 
 function PaymentCard({ payment }: { payment: any }) {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Listen for currency changes
   useEffect(() => {
@@ -264,6 +267,11 @@ function PaymentCard({ payment }: { payment: any }) {
 
   const progressPercent = (payment.paidAmount / payment.totalAmount) * 100;
   const remaining = payment.totalAmount - payment.paidAmount;
+
+  const handlePaymentSuccess = () => {
+    setRefreshKey(prev => prev + 1);
+    window.location.reload();
+  };
 
   return (
     <div key={refreshKey} className="glass rounded-2xl overflow-hidden">
@@ -370,6 +378,14 @@ function PaymentCard({ payment }: { payment: any }) {
           </div>
         </div>
       )}
+
+      {/* Add Payment Modal */}
+      <AddPaymentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        payment={payment}
+        onSuccess={handlePaymentSuccess}
+      />
     </div>
   );
 }

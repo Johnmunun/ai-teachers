@@ -53,7 +53,7 @@ const studentLinks = [
   { href: '/dashboard/payments', label: 'Mes paiements', icon: CreditCard },
   { href: '/dashboard/history', label: 'Historique', icon: History },
   { href: '/dashboard/revisions', label: 'Révisions IA', icon: Brain },
-  { href: '/dashboard/settings', label: 'Paramètres', icon: Settings },
+  // Paramètres masqué pour les étudiants
 ];
 
 export default function Sidebar({ user, isMobileOpen = false, onMobileToggle }: SidebarProps) {

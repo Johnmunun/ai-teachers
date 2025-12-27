@@ -25,12 +25,8 @@ export default function DeleteClassroomButton({ classroomId }: DeleteClassroomBu
 
     setDeleting(true);
     try {
-      const formData = new FormData();
-      formData.append('classroomId', classroomId);
-
-      const res = await fetch('/api/classrooms/delete', {
-        method: 'POST',
-        body: formData
+      const res = await fetch(`/api/classrooms/${classroomId}`, {
+        method: 'DELETE'
       });
 
       if (res.ok) {

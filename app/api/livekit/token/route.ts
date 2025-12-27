@@ -2,7 +2,15 @@ import { NextResponse } from 'next/server';
 import { createToken } from '@/lib/livekit';
 
 export async function GET(req: Request) {
-    const { searchParams } = new URL(req.url);
+    let searchParams = new URLSearchParams();
+    try {
+      if (req.url) {
+        const url = new URL(req.url);
+        searchParams = url.searchParams;
+      }
+    } catch (error) {
+      console.warn('Failed to parse URL from request:', error);
+    }
     const room = searchParams.get('room');
     const username = searchParams.get('username');
     const role = searchParams.get('role');

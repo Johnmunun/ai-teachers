@@ -28,8 +28,20 @@ interface Classroom {
   isEnrolled: boolean;
 }
 
+interface ActiveLesson {
+  id: string;
+  title: string | null;
+  startedAt: string;
+  classroom: {
+    id: string;
+    title: string;
+    teacher: { name: string; image: string | null };
+  };
+}
+
 export default function StudentCoursesPage() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+  const [activeLessons, setActiveLessons] = useState<ActiveLesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'enrolled' | 'available'>('all');
@@ -38,6 +50,14 @@ export default function StudentCoursesPage() {
 
   useEffect(() => {
     fetchClassrooms();
+    fetchActiveLessons();
+    
+    // Rafraîchir les cours en cours toutes les 10 secondes
+    const interval = setInterval(() => {
+      fetchActiveLessons();
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   // Force re-render when currency changes
@@ -64,6 +84,16 @@ export default function StudentCoursesPage() {
       console.error('Error fetching classrooms:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchActiveLessons = async () => {
+    try {
+      const res = await fetch('/api/classrooms/active');
+      const data = await res.json();
+      setActiveLessons(data.activeLessons || []);
+    } catch (error) {
+      console.error('Error fetching active lessons:', error);
     }
   };
 
@@ -117,6 +147,59 @@ export default function StudentCoursesPage() {
         <h1 className="text-3xl font-bold text-white mb-2">Mes Cours</h1>
         <p className="text-slate-400">Découvrez et inscrivez-vous aux cours disponibles</p>
       </div>
+
+      {/* Active Lessons - Cours en cours */}
+      {activeLessons.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+              <Play className="w-5 h-5 text-emerald-400" />
+              Cours en cours
+            </h2>
+            <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-sm font-medium">
+              {activeLessons.length} {activeLessons.length === 1 ? 'cours actif' : 'cours actifs'}
+            </span>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {activeLessons.map((lesson) => (
+              <motion.div
+                key={lesson.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass rounded-xl p-5 border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 transition-all"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-white mb-1">
+                      {lesson.classroom.title}
+                    </h3>
+                    {lesson.title && (
+                      <p className="text-sm text-slate-400">{lesson.title}</p>
+                    )}
+                  </div>
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                </div>
+                <div className="flex items-center gap-2 text-sm text-slate-400 mb-4">
+                  <Clock className="w-4 h-4" />
+                  <span>
+                    Démarré {new Date(lesson.startedAt).toLocaleTimeString('fr-FR', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+                <a
+                  href={`/classroom/${lesson.classroom.id}?role=student&lessonId=${lesson.id}`}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 transition-all"
+                >
+                  <Play className="w-4 h-4" />
+                  Rejoindre le cours
+                </a>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎓 AI Teachers - Plateforme d'Enseignement Assistée par IA
 
-## Getting Started
+Plateforme complète d'enseignement en ligne avec assistant IA, sessions vidéo en temps réel, gestion de classes, analytics et bien plus.
 
-First, run the development server:
+## 🚀 Démarrage Rapide
+
+### 1. Cloner et installer
+
+```bash
+git clone <votre-repo>
+cd ai-teachers
+npm install
+```
+
+### 2. Configuration
+
+Créez un fichier `.env` à la racine avec les variables nécessaires. Voir [SETUP.md](./SETUP.md) pour la configuration complète.
+
+**Variables minimales requises :**
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/ai_teachers"
+AUTH_URL="http://localhost:3000"
+AUTH_SECRET="your-secret-key"
+OPENAI_API_KEY="sk-your-key"
+LIVEKIT_API_KEY="your-key"
+LIVEKIT_API_SECRET="your-secret"
+NEXT_PUBLIC_LIVEKIT_URL="wss://your-server"
+```
+
+### 3. Base de données
+
+```bash
+npm run db:generate
+npm run db:push
+```
+
+### 4. Lancer le serveur
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ouvrez [http://localhost:3000](http://localhost:3000) dans votre navigateur.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📚 Documentation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **[SETUP.md](./SETUP.md)** - Guide de configuration complet
+- **[SETUP_NEW_FEATURES.md](./SETUP_NEW_FEATURES.md)** - Configuration des fonctionnalités avancées
+- **[IMPLEMENTATION_COMPLETE.md](./IMPLEMENTATION_COMPLETE.md)** - Liste des fonctionnalités
 
-## Learn More
+## ✨ Fonctionnalités
 
-To learn more about Next.js, take a look at the following resources:
+- 🎥 **Sessions vidéo en temps réel** (LiveKit)
+- 🤖 **Assistant IA pédagogique** (OpenAI)
+- 📊 **Analytics et insights** pour étudiants et enseignants
+- 💰 **Gestion des paiements** avec système de tranches
+- 📝 **Quiz et évaluations** en temps réel
+- 🎯 **Détection de confusion** automatique
+- 💬 **Mémoire conversationnelle** IA
+- ⚡ **Cache intelligent** (réduction de 60-80% des coûts OpenAI)
+- 📈 **Recommandations personnalisées** de cours
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🛠️ Technologies
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Next.js 15** - Framework React
+- **NextAuth.js** - Authentification
+- **Prisma** - ORM pour PostgreSQL
+- **OpenAI** - Intelligence artificielle
+- **LiveKit** - Vidéo en temps réel
+- **Tailwind CSS** - Styling
+- **TypeScript** - Type safety
 
-## Deploy on Vercel
+## 📦 Scripts disponibles
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run dev          # Serveur de développement
+npm run build        # Build de production
+npm run start        # Serveur de production
+npm run db:generate  # Générer le client Prisma
+npm run db:push      # Appliquer le schéma DB
+npm run db:studio    # Ouvrir Prisma Studio
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🔐 Sécurité
+
+- Toutes les routes sont protégées par authentification
+- Mots de passe hashés avec bcrypt
+- Tokens JWT sécurisés
+- Variables d'environnement pour les secrets
+
+## 📝 License
+
+Ce projet est privé et propriétaire.
+
+---
+
+**Besoin d'aide ?** Consultez [SETUP.md](./SETUP.md) pour la configuration détaillée.

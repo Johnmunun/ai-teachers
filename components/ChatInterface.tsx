@@ -41,12 +41,12 @@ const ChatInterface = forwardRef((props, ref) => {
 
     // Allow parent to trigger AI
     useImperativeHandle(ref, () => ({
-        sendToAi: async (text: string) => {
-            await processMessage(text);
+        sendToAi: async (text: string, isTeacher: boolean = true) => {
+            await processMessage(text, isTeacher);
         }
     }));
 
-    const processMessage = async (text: string) => {
+    const processMessage = async (text: string, isTeacher: boolean = false) => {
         const userMsg = { role: 'user', content: text };
         setMessages((prev) => [...prev, userMsg]);
         setIsLoading(true);
@@ -55,7 +55,12 @@ const ChatInterface = forwardRef((props, ref) => {
             const res = await fetch('/api/ai/interact', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text }),
+                body: JSON.stringify({ 
+                    message: text,
+                    context: 'classroom',
+                    forceAudio: isTeacher, // Force l'audio pour le prof
+                    forceBroadcast: isTeacher // Force le broadcast pour le prof
+                }),
             });
             const data = await res.json();
 
@@ -68,15 +73,40 @@ const ChatInterface = forwardRef((props, ref) => {
 
             setMessages((prev) => [...prev, aiMsg]);
 
-            // Auto-play audio locally for teacher
-            if (data.audio) {
-                playAudio(data.audio);
-            }
-
-            // Auto-broadcast if "broadcast": true is in the response (from system prompt)
-            // Or if triggered via voice and implies explaining to class.
-            if (data.broadcast) {
+            // Pour le prof : TOUJOURS jouer l'audio et broadcaster
+            if (isTeacher) {
+                if (data.audio) {
+                    playAudio(data.audio);
+                } else {
+                    // Si pas d'audio, en générer un
+                    try {
+                        const audioRes = await fetch('/api/ai/interact', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                message: `Génère l'audio pour: ${data.text}`,
+                                generateAudioOnly: true
+                            }),
+                        });
+                        const audioData = await audioRes.json();
+                        if (audioData.audio) {
+                            playAudio(audioData.audio);
+                            aiMsg.audio = audioData.audio;
+                        }
+                    } catch (e) {
+                        console.error('Error generating audio:', e);
+                    }
+                }
+                // Toujours broadcaster pour le prof
                 broadcastToClass(aiMsg);
+            } else {
+                // Pour les étudiants : comportement normal
+                if (data.audio) {
+                    playAudio(data.audio);
+                }
+                if (data.broadcast) {
+                    broadcastToClass(aiMsg);
+                }
             }
 
         } catch (e) {
@@ -90,17 +120,39 @@ const ChatInterface = forwardRef((props, ref) => {
         if (!input.trim()) return;
         const text = input;
         setInput('');
-        await processMessage(text);
+        // Par défaut, on considère que c'est le prof qui envoie (dans TeacherPanel)
+        await processMessage(text, true);
     };
 
     const playAudio = (base64: string) => {
         if (audioRef.current) {
-            console.log("Tentative de lecture audio...");
-            audioRef.current.src = `data:audio/mp3;base64,${base64}`;
-            audioRef.current.play().catch(e => {
-                console.error("Erreur lecture audio:", e);
-                // alert("Cliquez quelque part pour autoriser l'audio !");
-            });
+            // Arrêter toute lecture en cours pour éviter les conflits
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            
+            // Attendre un peu avant de charger le nouvel audio
+            setTimeout(() => {
+                if (audioRef.current) {
+                    console.log("Tentative de lecture audio...");
+                    audioRef.current.src = `data:audio/mp3;base64,${base64}`;
+                    audioRef.current.load(); // Recharger l'élément audio
+                    
+                    // Jouer avec gestion d'erreur
+                    audioRef.current.play().catch(e => {
+                        console.error("Erreur lecture audio:", e);
+                        // Si l'erreur est due à une interruption, réessayer après un court délai
+                        if (e.name === 'AbortError' || e.name === 'NotAllowedError') {
+                            setTimeout(() => {
+                                if (audioRef.current) {
+                                    audioRef.current.play().catch(err => {
+                                        console.error("Erreur lecture audio (2e tentative):", err);
+                                    });
+                                }
+                            }, 100);
+                        }
+                    });
+                }
+            }, 50);
         }
     };
 

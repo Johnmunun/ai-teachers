@@ -10,7 +10,15 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
+    let searchParams = new URLSearchParams();
+    try {
+      if (req.url) {
+        const url = new URL(req.url);
+        searchParams = url.searchParams;
+      }
+    } catch (error) {
+      console.warn('Failed to parse URL from request:', error);
+    }
     const studentId = searchParams.get('studentId');
     const classroomId = searchParams.get('classroomId');
 
@@ -43,7 +51,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const { paymentId, amount, method, reference, receivedBy, notes } = await req.json();
+    const { 
+      paymentId, 
+      amount, 
+      method, 
+      reference, 
+      receivedBy, 
+      notes,
+      expectedAmount,
+      hasExcuse,
+      excuseReason
+    } = await req.json();
 
     if (!paymentId || !amount) {
       return NextResponse.json({ error: 'paymentId et amount requis' }, { status: 400 });
@@ -70,17 +88,26 @@ export async function POST(req: Request) {
         method: method || 'CASH',
         reference,
         receivedBy,
-        notes
+        notes,
+        expectedAmount: expectedAmount ? parseFloat(expectedAmount) : undefined,
+        hasExcuse: hasExcuse || false,
+        excuseReason: hasExcuse ? excuseReason : undefined,
+        excuseApproved: hasExcuse ? null : undefined // En attente si excuse
       }
     });
 
     // Mettre à jour le montant payé
     const newPaidAmount = payment.paidAmount + parseFloat(amount);
-    const newStatus = newPaidAmount >= payment.totalAmount 
-      ? 'COMPLETED' 
-      : newPaidAmount > 0 
-        ? 'PARTIAL' 
-        : 'PENDING';
+    let newStatus: 'PENDING' | 'PARTIAL' | 'COMPLETED' | 'EXCUSED';
+    
+    if (newPaidAmount >= payment.totalAmount) {
+      newStatus = 'COMPLETED';
+    } else if (newPaidAmount > 0) {
+      // Si paiement partiel avec excuse, utiliser EXCUSED
+      newStatus = (hasExcuse && tranche.excuseApproved === null) ? 'EXCUSED' : 'PARTIAL';
+    } else {
+      newStatus = 'PENDING';
+    }
 
     await prisma.payment.update({
       where: { id: paymentId },
