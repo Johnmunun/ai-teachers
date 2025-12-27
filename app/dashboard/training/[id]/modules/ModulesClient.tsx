@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   BookOpen,
   Plus,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { swal } from '@/lib/swal';
 import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
 
 interface Module {
   id: string;
@@ -45,6 +46,10 @@ export default function ModulesClient({ trainingSessionId, modules: initialModul
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState<string | null>(null);
 
+  useEffect(() => {
+    setModules(initialModules);
+  }, [initialModules]);
+
   const toggleModule = (moduleId: string) => {
     const newExpanded = new Set(expandedModules);
     if (newExpanded.has(moduleId)) {
@@ -53,6 +58,132 @@ export default function ModulesClient({ trainingSessionId, modules: initialModul
       newExpanded.add(moduleId);
     }
     setExpandedModules(newExpanded);
+  };
+
+  const openModuleForm = async (module?: Module) => {
+    const isEdit = Boolean(module);
+    const result = await Swal.fire({
+      title: isEdit ? 'Modifier le module' : 'Nouveau module',
+      html: `
+        <input id="swal-module-title" class="swal2-input" placeholder="Titre" />
+        <textarea id="swal-module-description" class="swal2-textarea" placeholder="Description (optionnel)"></textarea>
+        <input id="swal-module-hours" type="number" class="swal2-input" placeholder="Durée estimée (heures)" min="0" step="1" />
+        <textarea id="swal-module-objectives" class="swal2-textarea" placeholder="Objectifs (1 par ligne)"></textarea>
+      `,
+      showCancelButton: true,
+      confirmButtonText: isEdit ? 'Enregistrer' : 'Créer',
+      cancelButtonText: 'Annuler',
+      focusConfirm: false,
+      background: '#0a0f1a',
+      color: '#e2e8f0',
+      customClass: {
+        popup: 'glass border border-white/10',
+        title: 'text-white',
+        htmlContainer: 'text-slate-300',
+        confirmButton: 'bg-cyan-500 hover:bg-cyan-600',
+        cancelButton: 'bg-slate-500 hover:bg-slate-600'
+      },
+      didOpen: () => {
+        const popup = Swal.getPopup();
+        if (!popup) return;
+
+        const titleEl = popup.querySelector<HTMLInputElement>('#swal-module-title');
+        const descEl = popup.querySelector<HTMLTextAreaElement>('#swal-module-description');
+        const hoursEl = popup.querySelector<HTMLInputElement>('#swal-module-hours');
+        const objEl = popup.querySelector<HTMLTextAreaElement>('#swal-module-objectives');
+
+        if (titleEl) titleEl.value = module?.title ?? '';
+        if (descEl) descEl.value = module?.description ?? '';
+        if (hoursEl) hoursEl.value = String(module?.estimatedHours ?? 10);
+        if (objEl) objEl.value = (module?.objectives ?? []).join('\n');
+      },
+      preConfirm: () => {
+        const popup = Swal.getPopup();
+        if (!popup) return null;
+
+        const titleEl = popup.querySelector<HTMLInputElement>('#swal-module-title');
+        const descEl = popup.querySelector<HTMLTextAreaElement>('#swal-module-description');
+        const hoursEl = popup.querySelector<HTMLInputElement>('#swal-module-hours');
+        const objEl = popup.querySelector<HTMLTextAreaElement>('#swal-module-objectives');
+
+        const title = (titleEl?.value ?? '').trim();
+        const description = (descEl?.value ?? '').trim();
+        const hoursRaw = (hoursEl?.value ?? '').trim();
+        const objectivesRaw = (objEl?.value ?? '').trim();
+
+        if (!title) {
+          Swal.showValidationMessage('Le titre est requis.');
+          return null;
+        }
+
+        const estimatedHours = Math.max(0, Math.round(Number(hoursRaw || 10)));
+        if (!Number.isFinite(estimatedHours)) {
+          Swal.showValidationMessage('La durée estimée doit être un nombre.');
+          return null;
+        }
+
+        const objectives = objectivesRaw
+          ? objectivesRaw
+              .split('\n')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : [];
+
+        return {
+          title,
+          description: description || null,
+          estimatedHours,
+          objectives
+        };
+      }
+    });
+
+    if (!result.isConfirmed || !result.value) return;
+
+    const loadingKey = module?.id ?? 'create-module';
+    setLoading(loadingKey);
+
+    try {
+      const res = await fetch(
+        module
+          ? `/api/training-sessions/${trainingSessionId}/modules/${module.id}`
+          : `/api/training-sessions/${trainingSessionId}/modules`,
+        {
+          method: module ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(result.value)
+        }
+      );
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        await swal.error('Erreur', data.error || 'Erreur lors de la sauvegarde');
+        return;
+      }
+
+      const data = await res.json();
+      const saved: Module | undefined = data.module;
+
+      if (saved) {
+        setModules((prev) => {
+          const idx = prev.findIndex((m) => m.id === saved.id);
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = saved;
+            return next;
+          }
+          return [...prev, saved].sort((a, b) => a.orderIndex - b.orderIndex);
+        });
+      }
+
+      await swal.success(isEdit ? 'Enregistré !' : 'Créé !', 'Module sauvegardé.');
+      router.refresh();
+    } catch (error) {
+      console.error('Error saving module:', error);
+      await swal.error('Erreur', 'Une erreur est survenue lors de la sauvegarde');
+    } finally {
+      setLoading(null);
+    }
   };
 
   const handleDeleteModule = async (moduleId: string, moduleTitle: string) => {
@@ -72,6 +203,12 @@ export default function ModulesClient({ trainingSessionId, modules: initialModul
       });
 
       if (res.ok) {
+        setModules((prev) => prev.filter((m) => m.id !== moduleId));
+        setExpandedModules((prev) => {
+          const next = new Set(prev);
+          next.delete(moduleId);
+          return next;
+        });
         await swal.success('Supprimé !', 'Le module a été supprimé avec succès.');
         router.refresh();
       } else {
@@ -88,6 +225,21 @@ export default function ModulesClient({ trainingSessionId, modules: initialModul
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-white">Modules</h2>
+          <p className="text-sm text-slate-400">Créez et modifiez la structure de la formation.</p>
+        </div>
+        <button
+          onClick={() => openModuleForm()}
+          disabled={loading === 'create-module'}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-rose-500 text-white font-medium disabled:opacity-60"
+        >
+          <Plus className="w-4 h-4" />
+          Ajouter un module
+        </button>
+      </div>
+
       {modules.length > 0 ? (
         modules.map((module, index) => {
           const isExpanded = expandedModules.has(module.id);
@@ -132,8 +284,9 @@ export default function ModulesClient({ trainingSessionId, modules: initialModul
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        // TODO: Implement edit
+                        openModuleForm(module);
                       }}
+                      disabled={loading === module.id}
                       className="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition"
                     >
                       <Edit className="w-4 h-4" />
@@ -231,7 +384,10 @@ export default function ModulesClient({ trainingSessionId, modules: initialModul
           <p className="text-slate-400 mb-6">
             Ajoutez des modules pour structurer votre formation.
           </p>
-          <button className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-rose-500 text-white font-medium">
+          <button
+            onClick={() => openModuleForm()}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-rose-500 text-white font-medium"
+          >
             <Plus className="w-5 h-5" />
             Ajouter un module
           </button>
