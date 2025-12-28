@@ -28,6 +28,7 @@ export default function TeacherPanel({ roomName, lessonId }: TeacherPanelProps) 
     const router = useRouter();
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState('');
+    const [isTranscribing, setIsTranscribing] = useState(false);
     const [showEndModal, setShowEndModal] = useState(false);
     const [isEndingSession, setIsEndingSession] = useState(false);
     const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
@@ -73,13 +74,13 @@ export default function TeacherPanel({ roomName, lessonId }: TeacherPanelProps) 
                     // Démarrer l'enregistrement
                     mediaRecorder.start();
                     
-                    // Envoyer des chunks toutes les 3 secondes pour transcription continue
+                    // Envoyer des chunks toutes les 1.5 secondes pour transcription plus rapide
                     recordingIntervalRef.current = setInterval(() => {
                         if (mediaRecorder.state === 'recording') {
                             mediaRecorder.stop();
                             mediaRecorder.start(); // Redémarrer pour le prochain chunk
                         }
-                    }, 3000);
+                    }, 1500); // Réduit de 3000ms à 1500ms pour réduire la latence
 
                 } catch (error) {
                     console.error('Error accessing microphone:', error);
@@ -112,6 +113,7 @@ export default function TeacherPanel({ roomName, lessonId }: TeacherPanelProps) 
     }, [isListening]);
 
     const transcribeAudio = async (audioBlob: Blob) => {
+        setIsTranscribing(true);
         try {
             const formData = new FormData();
             formData.append('audio', audioBlob, 'recording.webm');
@@ -130,19 +132,26 @@ export default function TeacherPanel({ roomName, lessonId }: TeacherPanelProps) 
 
             if (text) {
                 console.log('Whisper Transcript:', text);
-                setTranscript((prev) => prev + ' ' + text);
+                // Mettre à jour la transcription immédiatement pour réduire la latence visuelle
+                setTranscript((prev) => {
+                    const newTranscript = prev + ' ' + text;
+                    return newTranscript;
+                });
 
-                // Si le texte contient "nathalie", activer Nathalie
-                if (text.toLowerCase().includes('nathalie') || text.toLowerCase().includes('nath')) {
+                // Si le texte contient "nathalie" ou "nath", activer Nathalie
+                const textLower = text.toLowerCase();
+                if (textLower.includes('nathalie') || textLower.includes('nath')) {
                     console.log("Activating Nathalie via Whisper...");
                     chatRef.current?.sendToAi(text, true); // true = isTeacher
                 } else {
-                    // Analyser le texte pour suggestions
+                    // Analyser le texte pour suggestions (seulement si pas d'appel à Nathalie)
                     analyzeTextDebounced(text);
                 }
             }
         } catch (error) {
             console.error('Error transcribing audio:', error);
+        } finally {
+            setIsTranscribing(false);
         }
     };
 
@@ -363,12 +372,15 @@ export default function TeacherPanel({ roomName, lessonId }: TeacherPanelProps) 
                             </h2>
                             <div className="p-3 sm:p-4 bg-black/40 rounded-xl h-[150px] sm:h-[200px] overflow-y-auto text-sm sm:text-base text-slate-300 leading-relaxed font-mono border border-white/5">
                                 {transcript || <span className="text-slate-600 italic">En attente de données vocales...</span>}
-                                {isListening && (
+                                {(isListening || isTranscribing) && (
                                     <motion.span
                                         animate={{ opacity: [0, 1, 0] }}
                                         transition={{ repeat: Infinity, duration: 0.8 }}
                                         className="inline-block w-2.5 h-4 bg-cyan-500 ml-1 align-middle"
                                     />
+                                )}
+                                {isTranscribing && (
+                                    <span className="text-xs text-cyan-400 ml-2 italic">Transcription en cours...</span>
                                 )}
                             </div>
                         </div>

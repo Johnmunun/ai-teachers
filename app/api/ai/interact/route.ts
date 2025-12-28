@@ -123,6 +123,24 @@ export async function POST(req: Request) {
             ? REVISION_SYSTEM_PROMPT 
             : INTERACTIVE_SYSTEM_PROMPT;
 
+        // En mode classroom, vérifier si Nathalie est appelée par son nom
+        if (context === 'classroom') {
+            const messageLower = message.toLowerCase();
+            const isNathalieCalled = messageLower.includes('nathalie') || 
+                                    messageLower.includes('nath') ||
+                                    messageLower.includes('nathalie');
+            
+            if (!isNathalieCalled) {
+                // Nathalie ne répond pas si elle n'est pas appelée
+                return NextResponse.json({ 
+                    text: '', 
+                    shouldSpeak: false, 
+                    broadcast: false,
+                    silent: true // Flag pour indiquer que c'est silencieux
+                });
+            }
+        }
+
         // Récupérer les informations de l'utilisateur
         let userName = null;
         let userEmail = null;
@@ -174,18 +192,23 @@ export async function POST(req: Request) {
         let contextMessage = '';
         
         if (userName) {
-            contextMessage += `L'étudiant s'appelle ${userName}. `;
+            contextMessage += `L'utilisateur s'appelle ${userName}. `;
         }
         
         if (context === 'revision') {
             contextMessage += 'Mode révision activé. Tu es Nathalie, professeure assistante IA. ';
+        } else if (context === 'classroom') {
+            contextMessage += 'Mode classroom activé. Tu es Nathalie, professeure assistante IA. ';
+            contextMessage += 'IMPORTANT : Tu as été appelée par ton nom, tu peux maintenant répondre. ';
         }
         
         if (lessonId && lessonContent) {
-            contextMessage += `\n\nCONTEXTE DU COURS À RÉVISER (IMPORTANT - RESTE UNIQUEMENT DANS CE CONTEXTE) :\n${lessonContent}\n`;
-            contextMessage += 'IMPORTANT : Ne réponds QUE sur les sujets abordés dans ce cours. Si l\'étudiant pose une question hors contexte, redirige-le poliment vers les sujets du cours.';
+            contextMessage += `\n\nCONTEXTE DU COURS (IMPORTANT) :\n${lessonContent}\n`;
+            if (context === 'revision') {
+                contextMessage += 'IMPORTANT : Ne réponds QUE sur les sujets abordés dans ce cours. Si l\'étudiant pose une question hors contexte, redirige-le poliment vers les sujets du cours.';
+            }
         } else if (lessonId) {
-            contextMessage += `L'étudiant révise une séance spécifique (ID: ${lessonId}). `;
+            contextMessage += `L'utilisateur travaille sur une séance spécifique (ID: ${lessonId}). `;
         }
         
         if (conversationContext) {

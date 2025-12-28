@@ -70,3 +70,4 @@ Si le projet fonctionne en production avec un `AUTH_SECRET` différent, vous dev
 
 **Status** : ✅ Corrections appliquées dans `auth.ts` et `middleware.ts`
 
+

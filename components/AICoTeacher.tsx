@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useStore } from '@/lib/store';
 import { Lightbulb, MessageCircle, HelpCircle, X } from 'lucide-react';
 import { useRoomContext } from '@livekit/components-react';
@@ -24,11 +24,85 @@ const TypewriterText = ({ text }: { text: string }) => {
 };
 
 export default function AICoTeacher() {
-    const { aiSuggestions, setActiveQuiz, removeAiSuggestion } = useStore();
+    const { aiSuggestions, setActiveQuiz, removeAiSuggestion, clearAiSuggestions } = useStore();
+    const [isVisible, setIsVisible] = useState(false);
+    const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const lastActivityRef = useRef<number>(Date.now());
+    
     let room: any;
     try {
         room = useRoomContext();
     } catch (e) { }
+
+    // Gérer la fermeture du modal
+    const handleClose = useCallback(() => {
+        setIsVisible(false);
+        clearAiSuggestions();
+        if (inactivityTimerRef.current) {
+            clearTimeout(inactivityTimerRef.current);
+            inactivityTimerRef.current = null;
+        }
+    }, [clearAiSuggestions]);
+
+    // Réinitialiser le timer d'inactivité
+    const resetInactivityTimer = useCallback(() => {
+        lastActivityRef.current = Date.now();
+        
+        // Nettoyer le timer précédent
+        if (inactivityTimerRef.current) {
+            clearTimeout(inactivityTimerRef.current);
+        }
+        
+        // Si le modal est visible, démarrer un nouveau timer de 3 minutes
+        inactivityTimerRef.current = setTimeout(() => {
+            handleClose();
+        }, 3 * 60 * 1000); // 3 minutes
+    }, [handleClose]);
+
+    // Ouvrir le modal quand il y a des suggestions
+    useEffect(() => {
+        if (aiSuggestions.length > 0) {
+            setIsVisible(true);
+        }
+    }, [aiSuggestions.length]);
+
+    // Démarrer le timer quand le modal devient visible
+    useEffect(() => {
+        if (isVisible) {
+            resetInactivityTimer();
+        }
+    }, [isVisible, resetInactivityTimer]);
+
+    // Surveiller les interactions (clics, scroll, etc.) pour réinitialiser le timer
+    useEffect(() => {
+        if (!isVisible) return;
+
+        const handleActivity = () => {
+            resetInactivityTimer();
+        };
+
+        // Écouter les événements d'interaction
+        window.addEventListener('mousedown', handleActivity);
+        window.addEventListener('keydown', handleActivity);
+        window.addEventListener('scroll', handleActivity, { passive: true });
+        window.addEventListener('touchstart', handleActivity, { passive: true });
+
+        return () => {
+            window.removeEventListener('mousedown', handleActivity);
+            window.removeEventListener('keydown', handleActivity);
+            window.removeEventListener('scroll', handleActivity);
+            window.removeEventListener('touchstart', handleActivity);
+        };
+    }, [isVisible, resetInactivityTimer]);
+
+    // Nettoyer le timer au démontage
+    useEffect(() => {
+        return () => {
+            if (inactivityTimerRef.current) {
+                clearTimeout(inactivityTimerRef.current);
+            }
+        };
+    }, []);
 
     const launchQuiz = async (quizData: any) => {
         setActiveQuiz(quizData);
@@ -76,7 +150,8 @@ export default function AICoTeacher() {
         }
     }, [aiSuggestions.length, room]);
 
-    if (aiSuggestions.length === 0) return null;
+    // Ne pas afficher si pas de suggestions ou si fermé manuellement
+    if (aiSuggestions.length === 0 || !isVisible) return null;
 
     return (
         <div className="fixed right-2 sm:right-4 top-16 sm:top-20 w-[calc(100%-1rem)] sm:w-80 lg:w-96 max-w-sm lg:max-w-none z-50 pointer-events-none">
@@ -85,12 +160,20 @@ export default function AICoTeacher() {
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
                     className="bg-gradient-to-r from-indigo-900 to-slate-900 border border-cyan-500/50 shadow-[0_0_15px_rgba(34,211,238,0.2)] rounded-t-lg px-4 py-2 flex items-center justify-between backdrop-blur-md relative"
                 >
                     <div className="flex items-center gap-2">
                         <Lightbulb className="w-5 h-5 text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]" />
                         <h3 className="text-cyan-400 font-bold text-sm tracking-wide">AI CO-TEACHER <span className="text-xs opacity-60 font-mono">::ACTIVE::</span></h3>
                     </div>
+                    <button
+                        onClick={handleClose}
+                        className="text-slate-400 hover:text-red-400 transition-colors p-1 rounded hover:bg-red-500/10"
+                        title="Fermer le modal"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
                 </motion.div>
 
                 <div className="bg-slate-900/90 border-x border-b border-cyan-500/30 rounded-b-lg p-4 max-h-[70vh] overflow-y-auto space-y-6 backdrop-blur-xl">
@@ -113,7 +196,10 @@ export default function AICoTeacher() {
                                 />
 
                                 <button
-                                    onClick={() => removeAiSuggestion(idx)}
+                                    onClick={() => {
+                                        removeAiSuggestion(idx);
+                                        resetInactivityTimer(); // Réinitialiser le timer lors d'une interaction
+                                    }}
                                     className="absolute top-2 right-2 text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition p-1 z-10"
                                 >
                                     <X className="w-4 h-4" />
@@ -144,7 +230,10 @@ export default function AICoTeacher() {
 
                                 {item.type === 'quiz' && item.quizData && (
                                     <button
-                                        onClick={() => launchQuiz(item.quizData)}
+                                        onClick={() => {
+                                            launchQuiz(item.quizData);
+                                            resetInactivityTimer(); // Réinitialiser le timer lors d'une interaction
+                                        }}
                                         className="w-full mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-sm font-medium py-2 rounded-lg transition shadow-md hover:shadow-cyan-500/20 uppercase tracking-wide"
                                     >
                                         Lancer ce Quiz

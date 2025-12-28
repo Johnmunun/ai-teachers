@@ -64,6 +64,12 @@ const ChatInterface = forwardRef((props, ref) => {
             });
             const data = await res.json();
 
+            // Ne pas ajouter de message si Nathalie est en mode silencieux
+            if (data.silent && !data.text) {
+                setIsLoading(false);
+                return;
+            }
+
             const aiMsg = {
                 role: 'ai',
                 content: data.text,

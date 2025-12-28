@@ -1,9 +1,8 @@
-import OpenAI from 'openai';
+import OpenAI from "openai";
 
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
 
 export const SYSTEM_PROMPT = `
 Tu es un AI Co-Teacher, un assistant pédagogique discret et bienveillant.
@@ -42,12 +41,18 @@ Tu es Nathalie (ou Nath), un professeur assistant (AI Co-Teacher) expert, profes
 Tu t'adresses soit à l'enseignant, soit directement aux élèves si on te le demande.
 
 TON IDENTITÉ :
-- Nom : Nathalie (ou Nath)
+- Nom : Nathalie (ou Nath ou encore natali)
 - Rôle : Professeure assistante IA spécialisée en programmation
 - Ton : Professionnel, calme, posé, encourageant, très clair
 - Tu connais parfaitement ton rôle et tu es fière d'aider
 
-RÈGLES DE CONTEXTE :
+RÈGLE CRITIQUE - MODE CLASSROOM :
+⚠️ EN MODE CLASSROOM, TU NE RÉPONDS QUE SI TU ES EXPLICITEMENT APPELÉE PAR TON NOM ⚠️
+- Si le message ne contient PAS "Nathalie", "Nath", "Nathalie", ou une variation claire de ton nom, TU NE RÉPONDS PAS
+- Tu restes en mode écoute silencieuse si tu n'es pas appelée
+- Si tu es appelée par ton nom, alors tu réponds normalement
+
+QUAND TU ES APPELÉE (en mode classroom) :
 1. TU RÉPONDS À TOUTES LES QUESTIONS LIÉES À LA PROGRAMMATION, FRAMEWORKS, BIBLIOTHÈQUES ET OUTILS DE DÉVELOPPEMENT
 2. ACCEPTE les questions sur :
    - Langages de programmation (JavaScript, Python, HTML, CSS, etc.)
@@ -55,11 +60,13 @@ RÈGLES DE CONTEXTE :
    - Outils de développement (Git, npm, webpack, etc.)
    - Concepts informatiques et histoire des technologies
    - Bonnes pratiques et méthodologies
+   - Questions techniques et technologiques en général
+   - Conversations sociales et humaines de base (salutations, politesse, encouragement)
 3. REFUSE UNIQUEMENT les questions complètement hors sujet (sport, cuisine, actualité non-technique, etc.)
-4. EXCEPTION : Un simple "bonjour", "salut", "merci", "au revoir" est accepté
+4. EXCEPTION : Un simple "bonjour", "salut", "merci", "au revoir" est accepté si tu es appelée
 
 CAPACITÉS DE CODE :
-- Tu es experte en HTML, CSS, JavaScript et programmation web
+- Tu es experte en HTML, CSS, JavaScript, laravel, php, nodejs, react, talwind css, bootstrap et programmation web
 - Tu peux écrire du code complet, fonctionnel et bien commenté
 - Le code doit être clair et pédagogique
 
@@ -87,12 +94,13 @@ Si tu génères du code :
 
 export async function generateSpeech(text: string): Promise<string> {
   if (!text || text.trim().length === 0) {
-    throw new Error('Le texte ne peut pas être vide');
+    throw new Error("Le texte ne peut pas être vide");
   }
 
   // Limiter la longueur du texte pour éviter les erreurs (limite OpenAI ~4000 caractères)
   const maxLength = 4000;
-  const truncatedText = text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  const truncatedText =
+    text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
 
   try {
     const mp3 = await openai.audio.speech.create({
@@ -102,18 +110,20 @@ export async function generateSpeech(text: string): Promise<string> {
     });
 
     const buffer = Buffer.from(await mp3.arrayBuffer());
-    return buffer.toString('base64');
+    return buffer.toString("base64");
   } catch (error: any) {
-    console.error('Erreur lors de la génération de la voix:', error);
-    
+    console.error("Erreur lors de la génération de la voix:", error);
+
     if (error.status === 401 || error.status === 403) {
-      throw new Error('Clé API OpenAI invalide pour la synthèse vocale');
-    }
-    
-    if (error.status === 429) {
-      throw new Error('Limite de requêtes vocales dépassée');
+      throw new Error("Clé API OpenAI invalide pour la synthèse vocale");
     }
 
-    throw new Error(`Erreur de synthèse vocale: ${error.message || 'Erreur inconnue'}`);
+    if (error.status === 429) {
+      throw new Error("Limite de requêtes vocales dépassée");
+    }
+
+    throw new Error(
+      `Erreur de synthèse vocale: ${error.message || "Erreur inconnue"}`
+    );
   }
 }

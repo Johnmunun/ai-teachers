@@ -241,3 +241,4 @@ export default function ModulesClient({ trainingSessionId, modules: initialModul
   );
 }
 
+
