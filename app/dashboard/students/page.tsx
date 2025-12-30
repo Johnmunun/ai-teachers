@@ -26,15 +26,35 @@ async function getTeacherStudents(teacherId: string) {
     }
   });
 
+  // Get all training sessions of the teacher
+  const trainingSessions = await prisma.trainingSession.findMany({
+    where: { teacherId },
+    include: {
+      enrollments: {
+        include: {
+          student: {
+            include: {
+              payments: true,
+              quizResponses: true
+            }
+          },
+          tranches: true
+        }
+      }
+    }
+  });
+
   // Flatten and deduplicate students
   const studentsMap = new Map();
   
+  // Process students from classrooms
   classrooms.forEach(classroom => {
     classroom.studentClassrooms.forEach(sc => {
       if (!studentsMap.has(sc.student.id)) {
         studentsMap.set(sc.student.id, {
           ...sc.student,
           classrooms: [],
+          trainingSessions: [],
           totalPaid: 0,
           totalDue: 0,
           quizCount: sc.student.quizResponses.length,
@@ -58,9 +78,57 @@ async function getTeacherStudents(teacherId: string) {
     });
   });
 
+  // Process students from training sessions
+  trainingSessions.forEach(session => {
+    session.enrollments.forEach(enrollment => {
+      if (!studentsMap.has(enrollment.student.id)) {
+        studentsMap.set(enrollment.student.id, {
+          ...enrollment.student,
+          classrooms: [],
+          trainingSessions: [],
+          totalPaid: 0,
+          totalDue: 0,
+          quizCount: enrollment.student.quizResponses.length,
+          correctAnswers: enrollment.student.quizResponses.filter(q => q.isCorrect).length
+        });
+      }
+      
+      const studentData = studentsMap.get(enrollment.student.id);
+      studentData.trainingSessions.push({
+        id: session.id,
+        title: session.title,
+        joinedAt: enrollment.enrolledAt
+      });
+      
+      // Calculate payments for this training session
+      enrollment.tranches.forEach(tranche => {
+        if (tranche.paidAt) {
+          studentData.totalPaid += tranche.actualAmount || 0;
+        }
+        studentData.totalDue += tranche.expectedAmount;
+      });
+    });
+  });
+
+  // Combine classrooms and training sessions for display
+  const allClassrooms = [
+    ...classrooms.map(c => ({ 
+      id: c.id, 
+      title: c.title, 
+      studentCount: c.studentClassrooms.length,
+      type: 'classroom' as const
+    })),
+    ...trainingSessions.map(s => ({ 
+      id: s.id, 
+      title: s.title, 
+      studentCount: s.enrollments.length,
+      type: 'training' as const
+    }))
+  ];
+
   return {
     students: Array.from(studentsMap.values()),
-    classrooms: classrooms.map(c => ({ id: c.id, title: c.title, studentCount: c.studentClassrooms.length }))
+    classrooms: allClassrooms
   };
 }
 

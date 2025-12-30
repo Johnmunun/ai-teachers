@@ -173,7 +173,7 @@ export default function StudentsClient({ students, classrooms, stats }: Students
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-1">
-                          {student.classrooms.slice(0, 2).map((c: any) => (
+                          {student.classrooms?.slice(0, 2).map((c: any) => (
                             <span 
                               key={c.id}
                               className="px-2 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 text-xs"
@@ -181,9 +181,17 @@ export default function StudentsClient({ students, classrooms, stats }: Students
                               {c.title}
                             </span>
                           ))}
-                          {student.classrooms.length > 2 && (
+                          {student.trainingSessions?.slice(0, 2 - (student.classrooms?.length || 0)).map((s: any) => (
+                            <span 
+                              key={s.id}
+                              className="px-2 py-1 rounded-lg bg-violet-500/10 text-violet-400 text-xs"
+                            >
+                              {s.title}
+                            </span>
+                          ))}
+                          {((student.classrooms?.length || 0) + (student.trainingSessions?.length || 0)) > 2 && (
                             <span className="px-2 py-1 rounded-lg bg-white/10 text-slate-400 text-xs">
-                              +{student.classrooms.length - 2}
+                              +{((student.classrooms?.length || 0) + (student.trainingSessions?.length || 0)) - 2}
                             </span>
                           )}
                         </div>
@@ -233,7 +241,9 @@ export default function StudentsClient({ students, classrooms, stats }: Students
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-slate-300 text-sm">
-                          {student.classrooms[0] && new Date(student.classrooms[0].joinedAt).toLocaleDateString('fr-FR', {
+                          {(student.classrooms?.[0] || student.trainingSessions?.[0]) && new Date(
+                            (student.classrooms?.[0]?.joinedAt || student.trainingSessions?.[0]?.joinedAt) as string
+                          ).toLocaleDateString('fr-FR', {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric'
