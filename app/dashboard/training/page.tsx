@@ -19,6 +19,7 @@ import {
   Info
 } from 'lucide-react';
 import { formatMoney } from '@/lib/currency';
+import DeleteTrainingSessionButton from './DeleteTrainingSessionButton';
 
 interface TrainingSession {
   id: string;
@@ -286,6 +287,7 @@ export default function TrainingSessionsPage() {
                 >
                   <Settings className="w-4 h-4" />
                 </Link>
+                <DeleteTrainingSessionButton trainingSessionId={session.id} />
               </div>
             </motion.div>
           ))}

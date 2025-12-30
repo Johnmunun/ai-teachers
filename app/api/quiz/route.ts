@@ -137,6 +137,19 @@ export async function POST(req: Request) {
                                 }
                             }
                         }
+                    },
+                    module: {
+                        include: {
+                            trainingSession: {
+                                include: {
+                                    enrollments: {
+                                        where: {
+                                            studentId: userId
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             });
@@ -148,11 +161,27 @@ export async function POST(req: Request) {
                 );
             }
 
-            // Vérifier que l'étudiant est inscrit au cours
-            if (quiz.lesson.classroom.studentClassrooms.length === 0) {
+            // Vérifier que l'étudiant est inscrit (soit au cours pour quiz de leçon, soit à la formation pour quiz de module)
+            if (quiz.lessonId) {
+                // Quiz lié à une leçon (cours rapide)
+                if (!quiz.lesson || quiz.lesson.classroom.studentClassrooms.length === 0) {
+                    return NextResponse.json(
+                        { error: 'Vous n\'êtes pas inscrit à ce cours' },
+                        { status: 403 }
+                    );
+                }
+            } else if (quiz.moduleId) {
+                // Quiz lié à un module (formation complète)
+                if (!quiz.module || quiz.module.trainingSession.enrollments.length === 0) {
+                    return NextResponse.json(
+                        { error: 'Vous n\'êtes pas inscrit à cette formation' },
+                        { status: 403 }
+                    );
+                }
+            } else {
                 return NextResponse.json(
-                    { error: 'Vous n\'êtes pas inscrit à ce cours' },
-                    { status: 403 }
+                    { error: 'Quiz invalide : ni leçon ni module associé' },
+                    { status: 400 }
                 );
             }
 

@@ -115,6 +115,9 @@ model Module {
   // Contenu généré par IA
   aiGeneratedContent Json?  // Structure du cours proposée par l'IA
   
+  // Exercices et quiz du module
+  exercises        Json?    // Exercices du module (structure JSON)
+  
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -122,6 +125,7 @@ model Module {
   trainingSession TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
   courses         Course[]
   progressions    ModuleProgression[]
+  quizzes         Quiz[] // Quiz associés au module
 }
 
 // ================================
@@ -320,15 +324,21 @@ model Lesson {
 
 model Quiz {
   id            String   @id @default(uuid())
-  lessonId      String
+  lessonId      String?
+  moduleId      String?  // Quiz peut être lié à une leçon ou un module
   question      String
   options       String[]
   correctAnswer String
+  type          String?  @default("multiple_choice") // multiple_choice, true_false, open_ended
+  difficulty    String?  // easy, medium, hard
   createdAt     DateTime @default(now())
 
   // Relations
-  lesson    Lesson         @relation(fields: [lessonId], references: [id])
+  lesson    Lesson?        @relation(fields: [lessonId], references: [id])
+  module    Module?        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   responses QuizResponse[]
+  
+  @@index([moduleId])
 }
 
 model QuizResponse {
