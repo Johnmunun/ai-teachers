@@ -19,6 +19,7 @@ export default function StudentAIAssistant({ lessonId }: StudentAIAssistantProps
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -61,6 +62,11 @@ export default function StudentAIAssistant({ lessonId }: StudentAIAssistantProps
             };
 
             setMessages(prev => [...prev, assistantMessage]);
+
+            // Auto-play audio if available
+            if (data.audio) {
+                playAudio(data.audio);
+            }
         } catch (error) {
             console.error('Erreur interaction IA:', error);
             const errorMessage: Message = {
@@ -72,6 +78,16 @@ export default function StudentAIAssistant({ lessonId }: StudentAIAssistantProps
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const playAudio = (base64: string) => {
+        if (!audioRef.current) {
+            audioRef.current = new Audio();
+        }
+        audioRef.current.src = `data:audio/mp3;base64,${base64}`;
+        audioRef.current.play().catch(e => {
+            console.error("Erreur lecture audio:", e);
+        });
     };
 
     return (

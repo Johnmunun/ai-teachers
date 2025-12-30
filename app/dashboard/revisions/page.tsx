@@ -54,6 +54,7 @@ export default function RevisionsPage() {
   const [selectedQuizAnswer, setSelectedQuizAnswer] = useState<string | null>(null);
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -116,6 +117,11 @@ export default function RevisionsPage() {
       setMessages(prev => [...prev, aiMessage]);
       setQuizSubmitted(false);
       setSelectedQuizAnswer(null);
+
+      // Auto-play audio if available
+      if (data.audio) {
+        playAudio(data.audio);
+      }
       
     } catch (error) {
       console.error('Error:', error);
@@ -136,6 +142,16 @@ export default function RevisionsPage() {
 
   const requestQuiz = () => {
     sendMessage("Donne-moi un quiz sur ce qu'on vient de voir");
+  };
+
+  const playAudio = (base64: string) => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+    }
+    audioRef.current.src = `data:audio/mp3;base64,${base64}`;
+    audioRef.current.play().catch(e => {
+      console.error("Erreur lecture audio:", e);
+    });
   };
 
   return (

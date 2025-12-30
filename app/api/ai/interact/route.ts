@@ -20,7 +20,7 @@ FORMAT DE RÉPONSE JSON OBLIGATOIRE (réponds TOUJOURS dans ce format) :
 {
   "text": "Ta réponse textuelle (claire et pédagogique). Réponds toujours, même pour 'bonjour' ou des questions simples.",
   "type": "explanation",
-  "shouldSpeak": false,
+  "shouldSpeak": true,
   "broadcast": false
 }
 
@@ -33,7 +33,7 @@ Si l'étudiant demande un quiz, utilise :
     "options": ["Option A", "Option B", "Option C", "Option D"],
     "correctAnswer": "Option B"
   },
-  "shouldSpeak": false,
+  "shouldSpeak": true,
   "broadcast": false
 }
 
@@ -44,13 +44,13 @@ Si l'étudiant demande un exemple de code, utilise :
   "code": {
     "js": "// Exemple de code\nconst exemple = 'code ici';"
   },
-  "shouldSpeak": false,
+  "shouldSpeak": true,
   "broadcast": false
 }
 
 EXEMPLES DE RÉPONSES :
-- Pour "bonjour" : {"text": "Bonjour ! Je suis Nathalie, ton assistante pédagogique. 👋 Comment puis-je t'aider aujourd'hui ?", "type": "explanation", "shouldSpeak": false, "broadcast": false}
-- Pour "Explique-moi les boucles" : {"text": "Les boucles en JavaScript permettent de répéter une action plusieurs fois. Il existe plusieurs types : for, while, do-while, et forEach pour les tableaux. Voici un exemple simple :", "type": "example", "code": {"js": "// Boucle for\nfor (let i = 0; i < 5; i++) {\n  console.log('Numéro:', i);\n}"}, "shouldSpeak": false, "broadcast": false}
+- Pour "bonjour" : {"text": "Bonjour ! Je suis Nathalie, ton assistante pédagogique. 👋 Comment puis-je t'aider aujourd'hui ?", "type": "explanation", "shouldSpeak": true, "broadcast": false}
+- Pour "Explique-moi les boucles" : {"text": "Les boucles en JavaScript permettent de répéter une action plusieurs fois. Il existe plusieurs types : for, while, do-while, et forEach pour les tableaux. Voici un exemple simple :", "type": "example", "code": {"js": "// Boucle for\nfor (let i = 0; i < 5; i++) {\n  console.log('Numéro:', i);\n}"}, "shouldSpeak": true, "broadcast": false}
 
 RAPPEL : Réponds TOUJOURS en JSON valide, sans texte avant ou après.`;
 
@@ -232,9 +232,9 @@ export async function POST(req: Request) {
             );
         }
 
-        // Generate Audio if needed (only for live classroom, not revision)
+        // Generate Audio if needed (for all contexts: classroom, revision, student_assistance)
         let audioBase64 = null;
-        if (result.shouldSpeak && result.text && context !== 'revision') {
+        if (result.shouldSpeak && result.text) {
             try {
                 audioBase64 = await generateSpeech(result.text);
             } catch (audioErr) {
