@@ -114,6 +114,9 @@ export default function StartTrainingSessionPage() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-white mb-2">Démarrer une session</h1>
             <p className="text-slate-400">{trainingSession.title}</p>
+            {trainingSession.description && (
+              <p className="text-slate-500 text-sm mt-2">{trainingSession.description}</p>
+            )}
           </div>
 
           <div className="space-y-6">
@@ -132,7 +135,7 @@ export default function StartTrainingSessionPage() {
             </div>
 
             {/* Module Selection */}
-            {trainingSession.modules && trainingSession.modules.length > 0 && (
+            {trainingSession.modules && trainingSession.modules.length > 0 ? (
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   Module à enseigner
@@ -148,6 +151,12 @@ export default function StartTrainingSessionPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <p className="text-sm text-amber-400">
+                  ⚠️ Aucun module disponible. Veuillez d'abord ajouter des modules à cette formation.
+                </p>
               </div>
             )}
 
@@ -176,7 +185,7 @@ export default function StartTrainingSessionPage() {
             {/* Start Button */}
             <button
               onClick={startSession}
-              disabled={isLoading || !selectedModule}
+              disabled={isLoading || !selectedModule || !trainingSession.modules || trainingSession.modules.length === 0}
               className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-violet-500 to-rose-500 text-white text-lg font-semibold rounded-xl hover:shadow-xl hover:shadow-violet-500/25 disabled:opacity-50 transition-all"
             >
               {isLoading ? (

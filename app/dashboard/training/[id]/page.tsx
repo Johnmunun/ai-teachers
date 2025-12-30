@@ -158,9 +158,13 @@ export default async function TrainingSessionDetailPage({
             >
               <Settings className="w-4 h-4" />
             </Link>
-            <button className="px-4 py-2 bg-gradient-to-r from-violet-500 to-rose-500 text-white rounded-xl hover:shadow-lg transition">
+            <Link
+              href={`/dashboard/training/${id}/start`}
+              className="px-4 py-2 bg-gradient-to-r from-violet-500 to-rose-500 text-white rounded-xl hover:shadow-lg transition flex items-center gap-2"
+            >
               <Play className="w-4 h-4" />
-            </button>
+              Démarrer
+            </Link>
           </div>
         </div>
       </div>

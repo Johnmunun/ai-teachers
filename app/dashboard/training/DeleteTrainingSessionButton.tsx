@@ -56,3 +56,4 @@ export default function DeleteTrainingSessionButton({ trainingSessionId }: Delet
   );
 }
 
+
