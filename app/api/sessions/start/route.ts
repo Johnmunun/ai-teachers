@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const { classroomId, title, topics } = await req.json();
+    const { classroomId, title, topics, streamingLink } = await req.json();
 
     if (!classroomId) {
       return NextResponse.json({ error: 'classroomId requis' }, { status: 400 });
@@ -33,7 +33,8 @@ export async function POST(req: Request) {
       data: {
         classroomId,
         title: title || `Session du ${new Date().toLocaleDateString('fr-FR')}`,
-        topics: topics || []
+        topics: topics || [],
+        streamingLink: streamingLink || null
       }
     });
 

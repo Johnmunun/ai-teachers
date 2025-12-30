@@ -296,14 +296,15 @@ model StudentClassroom {
 }
 
 model Lesson {
-  id          String    @id @default(uuid())
-  classroomId String
-  courseId    String?   // Lien optionnel vers un cours de module
-  title       String?
-  summary     String?   @db.Text
-  topics      String[]
-  startedAt   DateTime  @default(now())
-  endedAt     DateTime?
+  id            String    @id @default(uuid())
+  classroomId   String
+  courseId      String?   // Lien optionnel vers un cours de module
+  title         String?
+  summary       String?   @db.Text
+  topics        String[]
+  streamingLink String?   // Lien de streaming (Google Meet, YouTube, Zoom, etc.)
+  startedAt     DateTime  @default(now())
+  endedAt       DateTime?
 
   // Relations
   classroom         Classroom          @relation(fields: [classroomId], references: [id])

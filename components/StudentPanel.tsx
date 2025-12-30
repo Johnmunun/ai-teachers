@@ -1,7 +1,7 @@
 'use client';
 import { useStore } from '@/lib/store';
 import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, TrendingUp, Award } from 'lucide-react';
+import { CheckCircle, XCircle, TrendingUp, Award, Video, ExternalLink } from 'lucide-react';
 import { useRoomContext } from '@livekit/components-react';
 import { RoomEvent } from 'livekit-client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +25,7 @@ export default function StudentPanel({ roomName, lessonId }: StudentPanelProps) 
     const [quizExplanation, setQuizExplanation] = useState<string>('');
     const [quizStats, setQuizStats] = useState({ total: 0, correct: 0 });
     const [studentId, setStudentId] = useState<string | null>(null);
+    const [streamingLink, setStreamingLink] = useState<string | null>(null);
     const { user } = useStore();
 
     // Récupérer l'ID de l'étudiant depuis le store ou l'API
@@ -48,6 +49,26 @@ export default function StudentPanel({ roomName, lessonId }: StudentPanelProps) 
             getStudentId();
         }
     }, [user]);
+
+    // Récupérer le lien de streaming si lessonId est disponible
+    useEffect(() => {
+        if (lessonId) {
+            const fetchLesson = async () => {
+                try {
+                    const res = await fetch(`/api/lessons/${lessonId}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.streamingLink) {
+                            setStreamingLink(data.streamingLink);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Erreur récupération leçon:', error);
+                }
+            };
+            fetchLesson();
+        }
+    }, [lessonId]);
 
     // Listen for Realtime Quiz Data
     useEffect(() => {
@@ -122,6 +143,20 @@ export default function StudentPanel({ roomName, lessonId }: StudentPanelProps) 
             <div className="max-w-4xl w-full space-y-6">
                 <div className="text-center">
                     <h1 className="text-2xl font-bold text-slate-900 mb-2">Salle de classe : {roomName}</h1>
+                    {streamingLink && (
+                        <div className="mt-4 mb-4">
+                            <a
+                                href={streamingLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+                            >
+                                <Video className="w-5 h-5" />
+                                Rejoindre le streaming
+                                <ExternalLink className="w-4 h-4" />
+                            </a>
+                        </div>
+                    )}
                     {quizStats.total > 0 && (
                         <div className="flex items-center justify-center gap-4 mt-4">
                             <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm">

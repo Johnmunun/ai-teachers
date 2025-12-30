@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/lib/store';
-import { Mic, MicOff, BookOpen, Square, Sparkles, CheckCircle2, FileText, X } from 'lucide-react';
+import { Mic, MicOff, BookOpen, Square, Sparkles, CheckCircle2, FileText, X, Video, ExternalLink } from 'lucide-react';
 import AICoTeacher from './AICoTeacher';
 import ChatInterface from './ChatInterface';
 import QuizManager from './QuizManager';
@@ -40,6 +40,7 @@ export default function TeacherPanel({ roomName, lessonId }: TeacherPanelProps) 
     // LiveKit hooks
     const { localParticipant } = useLocalParticipant();
     const [isMicEnabled, setIsMicEnabled] = useState(false);
+    const [streamingLink, setStreamingLink] = useState<string | null>(null);
 
     const analyzeText = async (text: string) => {
         try {
@@ -272,6 +273,25 @@ export default function TeacherPanel({ roomName, lessonId }: TeacherPanelProps) 
         };
     }, [localParticipant]);
 
+    // Récupérer le lien de streaming si lessonId est disponible
+    useEffect(() => {
+        if (lessonId) {
+            const fetchLesson = async () => {
+                try {
+                    const res = await fetch(`/api/lessons/${lessonId}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.streamingLink) {
+                            setStreamingLink(data.streamingLink);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Erreur récupération leçon:', error);
+                }
+            };
+            fetchLesson();
+        }
+    }, [lessonId]);
 
     const endSession = async () => {
         if (!lessonId) {
@@ -361,6 +381,22 @@ export default function TeacherPanel({ roomName, lessonId }: TeacherPanelProps) 
                         </motion.button>
                     </div>
                 </header>
+
+                {/* Streaming Link */}
+                {streamingLink && (
+                    <div className="mb-6 sm:mb-8">
+                        <a
+                            href={streamingLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all text-sm sm:text-base"
+                        >
+                            <Video className="w-5 h-5 sm:w-6 sm:h-6" />
+                            <span>Lien de streaming</span>
+                            <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </a>
+                    </div>
+                )}
 
                 <main className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8">
                     <div className="lg:col-span-8 space-y-4 sm:space-y-6">

@@ -11,7 +11,8 @@ import {
   Clock,
   BookOpen,
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  Video
 } from 'lucide-react';
 
 interface Classroom {
@@ -27,6 +28,7 @@ export default function StartSessionPage() {
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [sessionTitle, setSessionTitle] = useState('');
   const [topics, setTopics] = useState('');
+  const [streamingLink, setStreamingLink] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [lessonId, setLessonId] = useState<string | null>(null);
 
@@ -47,7 +49,8 @@ export default function StartSessionPage() {
         body: JSON.stringify({
           classroomId: id,
           title: sessionTitle || `Session du ${new Date().toLocaleDateString('fr-FR')}`,
-          topics: topics.split(',').map(t => t.trim()).filter(Boolean)
+          topics: topics.split(',').map(t => t.trim()).filter(Boolean),
+          streamingLink: streamingLink.trim() || null
         })
       });
 
@@ -132,6 +135,23 @@ export default function StartSessionPage() {
                 rows={3}
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50 resize-none"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
+                <Video className="w-4 h-4" />
+                Lien de streaming (optionnel)
+              </label>
+              <input
+                type="url"
+                value={streamingLink}
+                onChange={(e) => setStreamingLink(e.target.value)}
+                placeholder="https://meet.google.com/xxx-yyyy-zzz ou https://zoom.us/j/xxx ou https://youtube.com/watch?v=xxx"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
+              />
+              <p className="mt-2 text-xs text-slate-500">
+                Ajoutez un lien vers Google Meet, Zoom, YouTube ou toute autre plateforme de streaming
+              </p>
             </div>
 
             {/* Info */}
