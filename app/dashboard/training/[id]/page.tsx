@@ -402,6 +402,16 @@ export default async function TrainingSessionDetailPage({
             <h3 className="font-semibold text-white mb-4">Actions rapides</h3>
             <div className="space-y-2">
               <Link
+                href={`/dashboard/training/${id}/sessions`}
+                className="flex items-center justify-between p-3 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition"
+              >
+                <span className="flex items-center gap-2">
+                  <Play className="w-4 h-4" />
+                  Sessions actives
+                </span>
+                <ArrowLeft className="w-4 h-4 rotate-180" />
+              </Link>
+              <Link
                 href={`/dashboard/training/${id}/students`}
                 className="flex items-center justify-between p-3 rounded-xl bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition"
               >

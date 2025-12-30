@@ -72,10 +72,10 @@ export default function StartTrainingSessionPage() {
 
       const data = await res.json();
       
-      if (res.ok && data.lessonId) {
+      if (res.ok && data.lessonId && data.classroomId) {
         await swal.success('Session démarrée !', 'La session de formation a été créée avec succès.');
-        // Rediriger vers la page de la session ou le dashboard
-        router.push(`/dashboard/training/${id}`);
+        // Rediriger vers la session de classe créée
+        router.push(`/classroom/${data.classroomId}?lessonId=${data.lessonId}&role=teacher`);
       } else {
         throw new Error(data.error || 'Erreur lors du démarrage de la session');
       }
