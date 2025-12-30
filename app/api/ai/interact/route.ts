@@ -5,26 +5,30 @@ import { auth } from '@/auth';
 import { buildConversationContext, saveConversationMessage } from '@/lib/ai-memory';
 import { getCachedAIResponse, setCachedAIResponse } from '@/lib/cache';
 
-const REVISION_SYSTEM_PROMPT = `
-Tu es Nathalie, une professeure d'informatique patiente et pédagogue.
-Tu aides les étudiants à réviser leurs cours de programmation.
+const REVISION_SYSTEM_PROMPT = `Tu es Nathalie, une professeure d'informatique patiente et pédagogue. Tu aides les étudiants à réviser leurs cours de programmation.
 
 RÈGLES IMPORTANTES :
 1. Utilise un langage simple et accessible
 2. Donne des exemples concrets et visuels
 3. Encourage l'étudiant et sois positif
-4. Si l'étudiant demande un quiz, génère une question QCM
+4. Réponds TOUJOURS en JSON valide, même pour les salutations simples
+5. Si l'étudiant demande un quiz, génère une question QCM
 
-FORMAT DE RÉPONSE JSON OBLIGATOIRE :
+CRITIQUE : Tu DOIS répondre UNIQUEMENT avec un objet JSON valide. Aucun texte avant ou après le JSON.
+
+FORMAT DE RÉPONSE JSON OBLIGATOIRE (réponds TOUJOURS dans ce format) :
 {
-  "text": "Ta réponse textuelle (claire et pédagogique)",
-  "type": "explanation" | "example" | "quiz",
-  "code": {  // OPTIONNEL - pour les exemples de code
-    "html": "...",
-    "css": "...",
-    "js": "..."
-  },
-  "quizData": {  // OBLIGATOIRE si type === "quiz"
+  "text": "Ta réponse textuelle (claire et pédagogique). Réponds toujours, même pour 'bonjour' ou des questions simples.",
+  "type": "explanation",
+  "shouldSpeak": false,
+  "broadcast": false
+}
+
+Si l'étudiant demande un quiz, utilise :
+{
+  "text": "Voici un quiz pour tester tes connaissances !",
+  "type": "quiz",
+  "quizData": {
     "question": "La question du quiz",
     "options": ["Option A", "Option B", "Option C", "Option D"],
     "correctAnswer": "Option B"
@@ -33,17 +37,22 @@ FORMAT DE RÉPONSE JSON OBLIGATOIRE :
   "broadcast": false
 }
 
-STYLE DE CODE :
-- Si tu génères du code, rends-le clair et bien commenté
-- Utilise des noms de variables explicites
-- Ajoute des commentaires pour expliquer chaque étape
+Si l'étudiant demande un exemple de code, utilise :
+{
+  "text": "Voici un exemple de code pour t'aider à comprendre :",
+  "type": "example",
+  "code": {
+    "js": "// Exemple de code\nconst exemple = 'code ici';"
+  },
+  "shouldSpeak": false,
+  "broadcast": false
+}
 
-POUR LES QUIZ :
-- Questions claires et précises
-- 4 options de réponse
-- Une seule bonne réponse
-- Évite les questions trop faciles ou trop difficiles
-`;
+EXEMPLES DE RÉPONSES :
+- Pour "bonjour" : {"text": "Bonjour ! Je suis Nathalie, ton assistante pédagogique. 👋 Comment puis-je t'aider aujourd'hui ?", "type": "explanation", "shouldSpeak": false, "broadcast": false}
+- Pour "Explique-moi les boucles" : {"text": "Les boucles en JavaScript permettent de répéter une action plusieurs fois. Il existe plusieurs types : for, while, do-while, et forEach pour les tableaux. Voici un exemple simple :", "type": "example", "code": {"js": "// Boucle for\nfor (let i = 0; i < 5; i++) {\n  console.log('Numéro:', i);\n}"}, "shouldSpeak": false, "broadcast": false}
+
+RAPPEL : Réponds TOUJOURS en JSON valide, sans texte avant ou après.`;
 
 const InteractRequestSchema = z.object({
     message: z.string().min(1, 'Le message ne peut pas être vide'),
@@ -159,13 +168,54 @@ export async function POST(req: Request) {
 
         let result;
         try {
-            result = JSON.parse(content);
+            // Nettoyer le contenu pour extraire le JSON (enlever markdown code blocks si présents)
+            let cleanedContent = content.trim();
+            if (cleanedContent.startsWith('```json')) {
+                cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+            } else if (cleanedContent.startsWith('```')) {
+                cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+            }
+            
+            result = JSON.parse(cleanedContent);
+            
+            // Vérifier que le résultat a au moins un champ "text"
+            if (!result.text) {
+                // Si pas de texte, utiliser le contenu brut ou créer une réponse par défaut
+                result = {
+                    text: cleanedContent || "Je suis là pour t'aider ! Peux-tu reformuler ta question ?",
+                    type: 'explanation',
+                    shouldSpeak: false,
+                    broadcast: false
+                };
+            }
         } catch (parseError) {
             console.error('Erreur de parsing JSON:', parseError);
-            return NextResponse.json(
-                { error: 'Format de réponse invalide', content },
-                { status: 500 }
-            );
+            console.error('Contenu reçu:', content);
+            
+            // En cas d'erreur de parsing, essayer d'extraire le texte ou utiliser le contenu brut
+            // Extraire le texte entre accolades si possible
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                try {
+                    result = JSON.parse(jsonMatch[0]);
+                } catch {
+                    // Si ça échoue encore, créer une réponse par défaut avec le contenu
+                    result = {
+                        text: content || "Je suis là pour t'aider ! Peux-tu reformuler ta question ?",
+                        type: 'explanation',
+                        shouldSpeak: false,
+                        broadcast: false
+                    };
+                }
+            } else {
+                // Pas de JSON trouvé, utiliser le contenu brut comme texte
+                result = {
+                    text: content || "Je suis là pour t'aider ! Peux-tu reformuler ta question ?",
+                    type: 'explanation',
+                    shouldSpeak: false,
+                    broadcast: false
+                };
+            }
         }
 
         // Mettre en cache la réponse (1h pour les interactions)
