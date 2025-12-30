@@ -12,7 +12,8 @@ import {
   BookOpen,
   Sparkles,
   CheckCircle2,
-  Video
+  Video,
+  AlertCircle
 } from 'lucide-react';
 
 interface Classroom {
@@ -31,16 +32,56 @@ export default function StartSessionPage() {
   const [streamingLink, setStreamingLink] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [lessonId, setLessonId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [streamingLinkError, setStreamingLinkError] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch classroom details
     fetch(`/api/classrooms/${id}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Erreur lors du chargement du cours');
+        }
+        return res.json();
+      })
       .then(data => setClassroom(data))
-      .catch(console.error);
+      .catch(err => {
+        setError('Impossible de charger les détails du cours. Veuillez réessayer.');
+        console.error('Error fetching classroom:', err);
+      });
   }, [id]);
 
+  // Validation du lien de streaming
+  const validateStreamingLink = (url: string): boolean => {
+    if (!url.trim()) return true; // Optionnel
+    
+    try {
+      const urlObj = new URL(url);
+      // Vérifier que c'est http ou https
+      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
+  const handleStreamingLinkChange = (value: string) => {
+    setStreamingLink(value);
+    if (value.trim() && !validateStreamingLink(value)) {
+      setStreamingLinkError('Format de lien invalide. Utilisez un lien complet (ex: https://meet.google.com/...)');
+    } else {
+      setStreamingLinkError(null);
+    }
+  };
+
   const startSession = async () => {
+    setError(null);
+    
+    // Valider le lien de streaming
+    if (streamingLink.trim() && !validateStreamingLink(streamingLink)) {
+      setStreamingLinkError('Format de lien invalide. Utilisez un lien complet (ex: https://meet.google.com/...)');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const res = await fetch('/api/sessions/start', {
@@ -55,13 +96,21 @@ export default function StartSessionPage() {
       });
 
       const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Erreur lors du démarrage de la session');
+      }
+
       if (data.lessonId) {
         setLessonId(data.lessonId);
         // Redirect to live classroom
         router.push(`/classroom/${id}?lessonId=${data.lessonId}&role=teacher`);
+      } else {
+        throw new Error('Aucun ID de session reçu');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error starting session:', error);
+      setError(error.message || 'Erreur lors du démarrage de la session. Veuillez réessayer.');
     } finally {
       setIsLoading(false);
     }
@@ -145,14 +194,36 @@ export default function StartSessionPage() {
               <input
                 type="url"
                 value={streamingLink}
-                onChange={(e) => setStreamingLink(e.target.value)}
+                onChange={(e) => handleStreamingLinkChange(e.target.value)}
                 placeholder="https://meet.google.com/xxx-yyyy-zzz ou https://zoom.us/j/xxx ou https://youtube.com/watch?v=xxx"
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
+                className={`w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder:text-slate-500 focus:outline-none ${
+                  streamingLinkError 
+                    ? 'border-red-500/50 focus:border-red-500' 
+                    : 'border-white/10 focus:border-cyan-500/50'
+                }`}
               />
-              <p className="mt-2 text-xs text-slate-500">
-                Ajoutez un lien vers Google Meet, Zoom, YouTube ou toute autre plateforme de streaming
-              </p>
+              {streamingLinkError && (
+                <p className="mt-2 text-xs text-red-400 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {streamingLinkError}
+                </p>
+              )}
+              {!streamingLinkError && (
+                <p className="mt-2 text-xs text-slate-500">
+                  Ajoutez un lien vers Google Meet, Zoom, YouTube ou toute autre plateforme de streaming
+                </p>
+              )}
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-300">{error}</p>
+                </div>
+              </div>
+            )}
 
             {/* Info */}
             <div className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20">
@@ -183,8 +254,8 @@ export default function StartSessionPage() {
             {/* Start Button */}
             <button
               onClick={startSession}
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-lg font-semibold rounded-xl hover:shadow-xl hover:shadow-emerald-500/25 disabled:opacity-50 transition-all"
+              disabled={isLoading || !!streamingLinkError}
+              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-lg font-semibold rounded-xl hover:shadow-xl hover:shadow-emerald-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {isLoading ? (
                 <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />

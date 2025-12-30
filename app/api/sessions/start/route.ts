@@ -28,6 +28,40 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Cours non trouvé' }, { status: 404 });
     }
 
+    // Vérifier s'il y a déjà une session active pour cette classe
+    const activeSession = await prisma.lesson.findFirst({
+      where: {
+        classroomId,
+        endedAt: null, // Session non terminée
+      },
+      orderBy: {
+        startedAt: 'desc'
+      }
+    });
+
+    if (activeSession) {
+      return NextResponse.json({ 
+        error: 'Une session est déjà en cours pour ce cours. Veuillez terminer la session actuelle avant d\'en démarrer une nouvelle.',
+        activeLessonId: activeSession.id
+      }, { status: 400 });
+    }
+
+    // Validation du lien de streaming si fourni
+    if (streamingLink) {
+      try {
+        const url = new URL(streamingLink);
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+          return NextResponse.json({ 
+            error: 'Format de lien de streaming invalide. Utilisez un lien http ou https.' 
+          }, { status: 400 });
+        }
+      } catch {
+        return NextResponse.json({ 
+          error: 'Format de lien de streaming invalide. Utilisez un lien complet (ex: https://meet.google.com/...)' 
+        }, { status: 400 });
+      }
+    }
+
     // Create new lesson/session
     const lesson = await prisma.lesson.create({
       data: {

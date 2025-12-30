@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/auth';
 import { z } from 'zod';
 
 const CreateQuizSchema = z.object({
@@ -25,6 +26,15 @@ const QuizRequestSchema = z.discriminatedUnion('type', [
 // POST: Create a quiz (Teacher) or Save response (Student)
 export async function POST(req: Request) {
     try {
+        const session = await auth();
+        
+        if (!session?.user) {
+            return NextResponse.json(
+                { error: 'Non authentifié' },
+                { status: 401 }
+            );
+        }
+
         const body = await req.json();
         const validation = QuizRequestSchema.safeParse(body);
 
@@ -36,17 +46,42 @@ export async function POST(req: Request) {
         }
 
         const data = validation.data;
+        const userId = (session.user as any).id;
+        const userRole = (session.user as any).role;
 
         if (data.type === 'create') {
-            // Vérifier que la leçon existe
+            // Vérifier que l'utilisateur est un enseignant
+            if (userRole !== 'TEACHER') {
+                return NextResponse.json(
+                    { error: 'Seuls les enseignants peuvent créer des quiz' },
+                    { status: 403 }
+                );
+            }
+
+            // Vérifier que la leçon existe et que l'enseignant en est propriétaire
             const lesson = await prisma.lesson.findUnique({
                 where: { id: data.lessonId },
+                include: {
+                    classroom: {
+                        select: {
+                            teacherId: true
+                        }
+                    }
+                }
             });
 
             if (!lesson) {
                 return NextResponse.json(
                     { error: 'Leçon non trouvée' },
                     { status: 404 }
+                );
+            }
+
+            // Vérifier que l'enseignant est propriétaire de la classe
+            if (lesson.classroom.teacherId !== userId) {
+                return NextResponse.json(
+                    { error: 'Vous n\'êtes pas autorisé à créer un quiz pour cette leçon' },
+                    { status: 403 }
                 );
             }
 
@@ -70,9 +105,40 @@ export async function POST(req: Request) {
         }
 
         if (data.type === 'response') {
-            // Vérifier que le quiz existe
+            // Vérifier que l'utilisateur est un étudiant
+            if (userRole !== 'STUDENT') {
+                return NextResponse.json(
+                    { error: 'Seuls les étudiants peuvent répondre aux quiz' },
+                    { status: 403 }
+                );
+            }
+
+            // Vérifier que l'étudiant répond pour lui-même
+            if (data.studentId !== userId) {
+                return NextResponse.json(
+                    { error: 'Vous ne pouvez répondre qu\'à votre propre nom' },
+                    { status: 403 }
+                );
+            }
+
+            // Vérifier que le quiz existe et que l'étudiant est inscrit au cours
             const quiz = await prisma.quiz.findUnique({
                 where: { id: data.quizId },
+                include: {
+                    lesson: {
+                        include: {
+                            classroom: {
+                                include: {
+                                    studentClassrooms: {
+                                        where: {
+                                            studentId: userId
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             });
 
             if (!quiz) {
@@ -82,15 +148,11 @@ export async function POST(req: Request) {
                 );
             }
 
-            // Vérifier que l'étudiant existe
-            const student = await prisma.user.findUnique({
-                where: { id: data.studentId },
-            });
-
-            if (!student) {
+            // Vérifier que l'étudiant est inscrit au cours
+            if (quiz.lesson.classroom.studentClassrooms.length === 0) {
                 return NextResponse.json(
-                    { error: 'Étudiant non trouvé' },
-                    { status: 404 }
+                    { error: 'Vous n\'êtes pas inscrit à ce cours' },
+                    { status: 403 }
                 );
             }
 
